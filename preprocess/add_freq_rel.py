@@ -15,7 +15,7 @@ from collections import defaultdict
 path_prefix = '..'
 csqa_dir = '../data/'
 input_version = 'csqa_ret_3datasets'
-output_version = 'csqa_new'
+output_version = 'csqa_new_freq_rel'
 input_files = ['train_data.json', 'dev_data.json', 'test_data.json']
 file_paths = [os.path.join(csqa_dir, input_version, s) for s in input_files]
 output_dir = os.path.join(csqa_dir, output_version)
@@ -25,6 +25,8 @@ cpnet_path = '{}/data/kear/most_edges_allweights.json'.format(path_prefix)
 t_finder = TripletFinder(cpnet_path, weight_lb=0.0)
 keys = ['A', 'B', 'C', 'D', 'E']
 keys_mapping = {w:idx for idx, w in enumerate(keys)}
+
+output_json = True
 
 for fn, output_path in zip(file_paths, output_paths):
     with open(fn, 'r', encoding='utf-8') as json_file:
@@ -68,4 +70,4 @@ for fn, output_path in zip(file_paths, output_paths):
         output_data.append(q_data)       
     if output_json:
         print('output length:', len(output_data))
-        json.dump(output_data, open(output_path, 'w', encoding='utf-8'))
+        json.dump(output_data, open(output_path, 'w', encoding='utf-8'), indent=4)

@@ -152,7 +152,7 @@ def get_args():
     parser.add_argument('--model_type', type=str, default='albert', help='albert, deberta, electra, roberta.')
     parser.add_argument('--preset_model_type', type=str, default=None, help='set tokenizer, model_dir and model_type in preset modes. albert, deberta and electra, roberta.')
     parser.add_argument('--cache_dir', type=str, default=None)
-    parser.add_argument('--predict_dir', type=str, default='/workspace/data/yicxu/csqa/jslin_model/prediction/', help='directory of prediction files.')
+    parser.add_argument('--predict_dir', type=str, default='/workspace/home/raymond/Documents/UBC/CPSC532V/KEAR/prediction', help='directory of prediction files.')
 
     # adv training parameters
     parser.add_argument('--adv_train', action='store_true')
@@ -193,6 +193,8 @@ def get_args():
     parser = deepspeed.add_config_arguments(parser)
 
     args = parser.parse_args()
+
+    # Training with multiple GPUs
     if args.ddp or args.deepspeed:
         env_dict = {
             key: os.environ[key]

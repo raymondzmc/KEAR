@@ -13,6 +13,8 @@ import random
 
 path_prefix = '..'
 
+import pdb
+
 def generate_choice(ac_text, label, me_re=None):
     c_data = {
         'label': label,
@@ -130,7 +132,8 @@ if __name__ == '__main__':
     output_paths = [os.path.join(output_dir, s) for s in input_files]
 
     t_finder = TripletFinder()
-    me_re = MeaningResolver(wikdict_fn = '{}/data/yicxu/wiktionary_new/wik_dict.json'.format(path_prefix))
+    # me_re = MeaningResolver(wikdict_fn = '{}/data/yicxu/wiktionary_new/wik_dict.json'.format(path_prefix))
+    me_re = MeaningResolver(wikdict_fn = '{}/data/kear/wik_dict.json'.format(path_prefix))
     max_num_relations = 5
 
     
@@ -164,4 +167,4 @@ if __name__ == '__main__':
         else:
             with Pool(n_threads) as p:
                 output_data = list(tqdm(p.imap(func_name, data_list, chunksize=32), total=len(data_list)))
-        json.dump(output_data, open(output_path, 'w', encoding='utf-8'))
+        json.dump(output_data, open(output_path, 'w', encoding='utf-8'), indent=4)
