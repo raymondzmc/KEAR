@@ -250,9 +250,13 @@ def get_args():
         args.bert_model_dir = 'microsoft/deberta-v2-xlarge-mnli'
         args.bert_vocab_dir = 'microsoft/deberta-v2-xlarge-mnli'
         args.model_type = 'debertav2'      
-    elif args.preset_model_type == 'debertav3':
+    elif args.preset_model_type == 'debertav3-large':
         args.bert_model_dir = 'microsoft/deberta-v3-large'
         args.bert_vocab_dir = 'microsoft/deberta-v3-large'
+        args.model_type = 'debertav2'
+    elif args.preset_model_type == 'debertav3-base':
+        args.bert_model_dir = 'microsoft/deberta-v3-base'
+        args.bert_vocab_dir = 'microsoft/deberta-v3-base'
         args.model_type = 'debertav2'               
 
     if args.deepspeed:
