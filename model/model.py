@@ -175,7 +175,8 @@ class Model(PreTrainedModel):
         # lm_embeddings.requires_grad_()
         for index in range(choice_mask.size(1)):
             attr = lig.attribute(inputs=(input_ids),
-                                         additional_forward_args=(0))
+                                 additional_forward_args=(0),
+                                 internal_batch_size=5)
             attr = attr.sum(dim=-1).squeeze(0)
             attr = attr / torch.norm(attr)
             attritions.append(attr.tolist())
