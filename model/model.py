@@ -174,6 +174,7 @@ class Model(PreTrainedModel):
         lig = LayerIntegratedGradients(forward_func, self.deberta.embeddings.word_embeddings)
         # lm_embeddings.requires_grad_()
         for index in range(choice_mask.size(1)):
+            torch.cuda.empty_cache()
             attr = lig.attribute(inputs=(input_ids),
                                  additional_forward_args=(0),
                                  internal_batch_size=1)
@@ -181,7 +182,9 @@ class Model(PreTrainedModel):
             attr = attr / torch.norm(attr)
             attritions.append(attr.tolist())
 
-        logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+
+        with torch.no_grad():
+            logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
 
 
         label_to_use = labels
