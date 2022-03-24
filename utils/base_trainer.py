@@ -100,29 +100,29 @@ class BaseTrainer:
             step = self.current_used_last_name
         output_dir = os.path.join(self.output_model_dir, str(step)) if step is not None else self.output_model_dir
 
-        if self.rank == 0:
-            logger.info('saving model to {}'.format(output_dir))
-            Path(output_dir).mkdir(exist_ok=True, parents=True)
-            if not self.deepspeed:
-                model_to_save = self.model.module if hasattr(self.model, "module") else self.model
-                model_to_save.save_pretrained(output_dir)
-                torch.save(self.optimizer.state_dict(), os.path.join(output_dir, 'optimizer.pt'))
-                torch.save(self.scheduler.state_dict(), os.path.join(output_dir, 'scheduler.pt'))
-            random_states = {
-                'random': random.getstate(),
-                'np': np.random.get_state(),
-                'torch': torch.get_rng_state(),
-                'torch.cuda': torch.cuda.get_rng_state(),
-            }                        
-            torch.save(random_states, os.path.join(output_dir, 'random_states.pt'))
-            self.lm_config.save_pretrained(output_dir)
-            if last_checkpoint:
-                training_info = {
-                    'global_step': self.global_step,
-                    'epoch': epoch,
-                    'tb_step': self.tb_step,
-                }
-                json.dump(training_info, open(os.path.join(output_dir, 'training_info.json'), 'w') )
+        logger.info('saving model to {}'.format(output_dir))
+        Path(output_dir).mkdir(exist_ok=True, parents=True)
+        if not self.deepspeed:
+            model_to_save = self.model.module if hasattr(self.model, "module") else self.model
+            model_to_save.save_pretrained(output_dir)
+            torch.save(self.optimizer.state_dict(), os.path.join(output_dir, 'optimizer.pt'))
+            torch.save(self.scheduler.state_dict(), os.path.join(output_dir, 'scheduler.pt'))
+        random_states = {
+            'random': random.getstate(),
+            'np': np.random.get_state(),
+            'torch': torch.get_rng_state(),
+            'torch.cuda': torch.cuda.get_rng_state(),
+        }                        
+        torch.save(random_states, os.path.join(output_dir, 'random_states.pt'))
+        self.lm_config.save_pretrained(output_dir)
+        if last_checkpoint:
+            training_info = {
+                'global_step': self.global_step,
+                'epoch': epoch,
+                'tb_step': self.tb_step,
+            }
+            json.dump(training_info, open(os.path.join(output_dir, 'training_info.json'), 'w') )
+
         if self.multi_gpu:
             dist.barrier()
         if dataloader is not None:

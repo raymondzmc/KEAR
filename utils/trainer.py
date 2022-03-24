@@ -232,10 +232,9 @@ class Trainer(BaseTrainer):
     
     def save_training_record(self, last_checkpoint=False):
         self.training_records['current_used_last_name'] = self.current_used_last_name
-        if self.rank == 0:
-            if last_checkpoint:
-                json.dump(self.training_records, open(os.path.join(self.output_model_dir, self.current_used_last_name, 'training_records.json'), 'w')) # save a copy to last checkpoint
-            json.dump(self.training_records, open(os.path.join(self.output_model_dir, 'training_records.json'), 'w'))
+        if last_checkpoint:
+            json.dump(self.training_records, open(os.path.join(self.output_model_dir, self.current_used_last_name, 'training_records.json'), 'w')) # save a copy to last checkpoint
+        json.dump(self.training_records, open(os.path.join(self.output_model_dir, 'training_records.json'), 'w'))
 
     def _report(self, train_record, devlp_records, epoch=None):
         # record: loss, right_num, all_num
