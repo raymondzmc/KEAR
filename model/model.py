@@ -177,7 +177,7 @@ class Model(PreTrainedModel):
             torch.cuda.empty_cache()
             attr = lig.attribute(inputs=(input_ids),
                                  additional_forward_args=(0),
-                                 internal_batch_size=1)
+                                 n_steps=25,)
             attr = attr.sum(dim=-1).squeeze(0)
             attr = attr / torch.norm(attr)
             attritions.append(attr.tolist())
@@ -209,7 +209,6 @@ class Model(PreTrainedModel):
         choice_mask, labels, dataset_name, mode = batch[-4:]
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
         logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
-        pdb.set_trace()
         label_to_use = labels
         clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
 
