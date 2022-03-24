@@ -1,12 +1,12 @@
 export DATA_DIR="data/"
-export OUTPUT_DIR="test/"
+export OUTPUT_DIR="test_no_retrieval_no_triples_no_descr/"
 export TOKENIZERS_PARALLELISM=false
 export LOADMODEL_ERROR=0
 
 # deepspeed task.py --append_descr 1 --append_triples --append_retrieval 1 --data_version csqa_ret_3datasets --lr 5e-6 \
-# 		--append_answer_text 1 --weight_decay 0 --preset_model_type debertav2-xlarge --batch_size 1 --max_seq_length 50 
-# 		--num_train_epochs 15 --save_interval_step 4 --continue_train --print_number_per_epoch 1 --vary_segment_id --seed 42 \
-# 		--warmup_proportion 0.1 --optimizer_type adamw --ddp --deepspeed --test_mode --clear_output_folder
+#       --append_answer_text 1 --weight_decay 0 --preset_model_type debertav2-xlarge --batch_size 1 --max_seq_length 50 
+#       --num_train_epochs 15 --save_interval_step 4 --continue_train --print_number_per_epoch 1 --vary_segment_id --seed 42 \
+#       --warmup_proportion 0.1 --optimizer_type adamw --ddp --deepspeed --test_mode --clear_output_folder
 
 
 # python -m torch.distributed.launch --nproc_per_node=2 task.py --append_descr 1 \
@@ -17,7 +17,8 @@ export LOADMODEL_ERROR=0
 # DeBERTa LR: {4e−6, 6e−6, 9e−6}
 # VAT:  α ∈ {0.1, 1.0, 10.0}, ε = 1e−5
 
-python task.py --data_version csqa_ret_3datasets --append_descr 1 --append_triples --append_retrieval 1  --append_answer_text 1 \
-			   --preset_model_type debertav3 --optimizer_type adamw --lr 4e-6 --weight_decay 0.01 --warmup_proportion 0.1 --max_seq_length 50 \
-			   --batch_size 2 --gradient_acc_step 24 --num_train_epochs 10 --save_interval_step 2 --print_loss_step 10 --print_number_per_epoch 2  \
-			   --continue_train --clear_output_folder --vary_segment_id  --seed 42 --local_rank 3
+python task.py --data_version csqa_ret_3datasets --append_descr 0 --append_retrieval 0  --append_answer_text 1 \
+               --preset_model_type debertav3-base --optimizer_type adamw --lr 4e-6 --weight_decay 0.01 --warmup_proportion 0.1 --max_seq_length 512 \
+               --batch_size 1 --gradient_acc_step 48 --num_train_epochs 10 --save_interval_step 100 --print_loss_step 10 --print_number_per_epoch 2  \
+               --continue_train --clear_output_folder --vary_segment_id  --seed 42 --local_rank 3 \
+               --output_model_dir test_no_retrieval_no_triples_no_descr/

@@ -18,6 +18,7 @@ from utils.trainer import Trainer
 from utils import my_dist
 import deepspeed
 from transformers import AutoConfig
+import pdb
 
 import logging; logging.getLogger("transformers").setLevel(logging.WARNING)
 logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -118,6 +119,41 @@ class SelectReasonableText:
                 predicts.extend(torch.argmax(logits, dim=1).cpu().numpy().tolist())
         return idx, result, labels, predicts
 
+    def interpret(self, dataloader, tokenizer):
+        using_dataset_name = self.config.data_version
+        result = []
+        idx = []
+        labels = []
+        predicts = []
+        tokens, attritions, probs = [], [], []
+        looper = tqdm(dataloader, desc='Predict')
+        for batch in looper:
+
+            # clip batch based on max length
+            batch = clip_batch(batch)
+            self.model.train()
+            this_label = batch[-2]
+            if batch[-2].sum() < 0:
+                batch = list(batch[:-2]) + [torch.zeros_like(batch[-2]), batch[-1]]
+                batch = tuple(batch)
+
+            loss, right_num, input_size, logits, adv_loss, attr = self.trainer._interp_forward(batch, None, mode='dev', dataset_name=using_dataset_name, return_all=True)
+            idx.extend(batch[0].cpu().numpy().tolist())
+            result.extend(logits.detach().cpu().numpy().tolist())
+            labels.extend(this_label.numpy().tolist())
+            predicts.extend(torch.argmax(logits, dim=1).cpu().numpy().tolist())
+            
+            # TODO: Support for batch_size > 1
+            attention_mask = batch[2][0]
+            input_ids = batch[1][0]
+            tokens.append([tokenizer.convert_ids_to_tokens(ids)[:int(attention_mask[choice_idx].sum())] for choice_idx, ids in enumerate(input_ids)])
+            attritions.append([values[:int(attention_mask[choice_idx].sum())] for choice_idx, values in enumerate(attr)])
+            probs.append(torch.softmax(logits, dim=-1).squeeze(0).tolist())
+
+        return idx, result, labels, predicts, tokens, attritions, probs
+
+
+
 def get_args():
     parser = argparse.ArgumentParser()
 
@@ -166,6 +202,7 @@ def get_args():
     parser.add_argument('--adv_epsilon', default=1e-6, type=float)
     parser.add_argument('--grad_adv_loss', default='symmetric-kl', type=str, help='loss for computing gradient in VAT. only useful for sift.')
     parser.add_argument('--adv_loss', default='SymKlCriterion', type=str)
+
     # Data parameters
     parser.add_argument('--append_answer_text', type=int, default=0, help='append answer text to the question.')
     parser.add_argument('--append_descr', type=int, default=0, help='append wiktionary description.')
@@ -190,6 +227,11 @@ def get_args():
     parser.add_argument('--continue_train', action='store_true', help='find possible previous records and continue training.')
     parser.add_argument('--save_interval_step', type=int, default=None, help='save every this number of epochs. Model will join the last checkpoint.')
     parser.add_argument('--save_every', action='store_true', help='store every time the model is evaluated.')
+
+
+    # Our defined parameters
+    parser.add_argument('--interpret', action='store_true', help='Whether to interp model decisions.')
+
     parser = deepspeed.add_config_arguments(parser)
 
     args = parser.parse_args()
@@ -282,6 +324,7 @@ def get_args():
             args.predict_dir = os.environ['OUTPUT_DIR']
         args.predict_dir = os.path.join(args.predict_dir, pred_folder)
         Path(args.predict_dir).mkdir(exist_ok=True, parents=True)
+
     if args.pred_file_name is not None:
         args.pred_file_name = os.path.join(args.predict_dir, args.pred_file_name)
         print('output to:', args.pred_file_name)
@@ -421,7 +464,18 @@ if __name__ == '__main__':
         srt.init(Model)
         dataset_name = args.data_version
         dataloader = devlp_dataloaders[dataset_name]
-        idx, result, label, predict = srt.trial(dataloader)
+
+        if args.interpret:
+            idx, result, label, predict, tokens, attritions, probs = srt.interpret(dataloader, tokenizer)
+            visualize_output = {
+                'tokens': tokens,
+                'attritions': attritions,
+                'probs': probs,
+            }
+            with open(pjoin(args.predict_dir, 'output.json'), 'w+') as f:
+                json.dump(visualize_output, f, indent=4)
+        else:
+            idx, result, label, predict = srt.trial(dataloader)
 
         content = ''
         length = len(result)

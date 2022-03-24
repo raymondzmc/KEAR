@@ -22,6 +22,7 @@ from utils import my_dist
 import deepspeed
 import time
 import logging
+import pdb
 logger = logging.getLogger(__name__)
 
 class Trainer(BaseTrainer):
@@ -196,6 +197,37 @@ class Trainer(BaseTrainer):
             else:
                 result = tuple([loss, right_num.sum(), input_size.sum()])
             record.inc([it.item() for it in result])                
+        return loss, all_result
+
+
+    def _interp_forward(self, batch, record, dataset_name=None, mode='interp', return_all=False):
+        if dataset_name is None:
+            dataset_name = batch[-1]
+        else:
+            batch = (*batch, dataset_name)
+        valids = batch[-2]
+        batch = tuple(list(batch[:-2]) + [batch[-1]])
+        valids = valids.to(self.device)
+        if self.clip_batch:
+            batch = clip_batch(batch)
+        moved_batch = []
+        for t in batch:
+            moved_batch.append(str(t) if (type(t) is np.str_ or type(t) is str) else t.to(self.device))
+        batch = tuple(moved_batch)
+        
+        all_result = self.model.interp(*batch, mode)
+
+        if return_all:
+            return all_result
+        loss, right_num, input_size, logits, adv_norm, attritions = all_result 
+        
+        loss = loss.mean() / self.config.gradient_acc_step
+        if adv_norm is not None:
+            result = tuple([loss, right_num.sum(), input_size.sum(), adv_norm.mean(), attritions])
+        else:
+            result = tuple([loss, right_num.sum(), input_size.sum(), attritions])
+        record.inc([it.item() for it in result])        
+
         return loss, all_result
     
     def save_training_record(self, last_checkpoint=False):

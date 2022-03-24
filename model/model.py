@@ -2,7 +2,6 @@
 # Licensed under the MIT license.
 
 from .layers import ChoicePredictor
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,6 +17,10 @@ from transformers import (
     load_tf_weights_in_electra
 )
 import logging
+
+import pdb
+
+from captum.attr import LayerIntegratedGradients
 
 logger = logging.getLogger(__name__)
 CSQA_CHOICE_NUM = 5
@@ -51,7 +54,6 @@ class Model(PreTrainedModel):
             self.deberta = DebertaV2Model(config)
         else:
             raise ValueError('Model type not supported.')
-
         scorer = {}
         scorer[opt['data_version']] = ChoicePredictor(config, opt)
         self.scorer = nn.ModuleDict(scorer)
@@ -147,10 +149,63 @@ class Model(PreTrainedModel):
         embedding_output = lm.embeddings(flat_input_ids, flat_token_type_ids)
         return embedding_output
 
+
+
+    def interp(self, *batch):
+        """
+        batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
+        """
+        choice_mask, labels, dataset_name, mode = batch[-4:]
+        idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
+        # lm_embeddings = self.embed_encode(input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
+        input_size = self._to_tensor(idx.size(0), idx.device)
+
+        def forward_func(input_ids, index=0):
+            pred = self._forward(idx,
+                                 input_ids[:, [index]],
+                                 attention_mask[:, [index]],
+                                 token_type_ids[:, [index]],
+                                 question_mask,
+                                 dataset_name)
+            return pred[0]
+
+
+        attritions = []
+        lig = LayerIntegratedGradients(forward_func, self.deberta.embeddings.word_embeddings)
+        # lm_embeddings.requires_grad_()
+        for index in range(choice_mask.size(1)):
+            attr = lig.attribute(inputs=(input_ids),
+                                         additional_forward_args=(0))
+            attr = attr.sum(dim=-1).squeeze(0)
+            attr = attr / torch.norm(attr)
+            attritions.append(attr.tolist())
+
+        logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+
+
+        label_to_use = labels
+        clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
+
+        loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
+
+        # Not used for interpretation
+        adv_loss = torch.zeros_like(loss)
+        adv_norm = torch.zeros_like(loss)
+
+        with torch.no_grad():
+            predicts = torch.argmax(clf_logits, dim=1)
+            right_num = (predicts == labels)
+        return loss, right_num, input_size, clf_logits, adv_norm, attritions
+
+
     def forward(self, *batch):
+        """
+        batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
+        """
         choice_mask, labels, dataset_name, mode = batch[-4:]
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
         logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+        pdb.set_trace()
         label_to_use = labels
         clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
 

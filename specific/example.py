@@ -2,7 +2,7 @@
 # Licensed under the MIT license.
 
 from utils.feature import Feature
-
+import pdb
 
 label_dict = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G':6, 'H': 7, None: -1}
 rel_mapping = {
@@ -89,7 +89,7 @@ class ConceptNetExample:
             else:
                 out_data['question_text'] = json_obj['question']['stem']           
             if append_retrieval > 0:
-                retrieval_texts = choice['retrieval']                
+                retrieval_texts = choice['retrieval']
                 out_data['ac_meaning'] = maybe_add(out_data['ac_meaning'], ' '.join(retrieval_texts)) # add retrieval as a part of ac meaning
             return out_data
 
