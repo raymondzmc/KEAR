@@ -127,8 +127,12 @@ class SelectReasonableText:
         predicts = []
         tokens, attritions, probs = [], [], []
         looper = tqdm(dataloader, desc='Predict')
+        
+        c = 0
         for batch in looper:
-            
+            c+=1
+            if c > 100:
+                break
             # clip batch based on max length
             batch = clip_batch(batch)
             self.model.train()
