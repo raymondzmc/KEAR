@@ -176,7 +176,7 @@ class Model(PreTrainedModel):
         for index in range(choice_mask.size(1)):
             attr = lig.attribute(inputs=(input_ids),
                                  additional_forward_args=(0),
-                                 internal_batch_size=2)
+                                 internal_batch_size=1)
             attr = attr.sum(dim=-1).squeeze(0)
             attr = attr / torch.norm(attr)
             attritions.append(attr.tolist())
