@@ -19,7 +19,7 @@ from transformers import (
 from transformers.modeling_outputs import BaseModelOutput
 import logging
 
-import pdb
+import gc, pdb
 
 from captum.attr import LayerIntegratedGradients
 
