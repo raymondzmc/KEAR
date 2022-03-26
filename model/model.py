@@ -258,11 +258,19 @@ class Model(PreTrainedModel):
             for i in range(self.num_choices):
 
                 # Clear cache to save memory
+                gc.collect()
                 torch.cuda.empty_cache()
+                oom = False
 
-                last_hidden_state.append(
-                    lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
-                )
+                try:
+                    last_hidden_state.append(
+                        lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+                    )
+                except RuntimeError: # Out of memory
+                    oom = True
+
+                if oom:
+                    pdb.set_trace()
             
             last_hidden_state = torch.cat(last_hidden_state, dim=0)
 
