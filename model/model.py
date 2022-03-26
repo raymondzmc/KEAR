@@ -260,20 +260,22 @@ class Model(PreTrainedModel):
                 # Clear cache to save memory
                 gc.collect()
                 torch.cuda.empty_cache()
-                # oom = False
+                oom = False
 
 
-                # try:
+                try:
+                    last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+                    outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+                    scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
                 #     last_hidden_state.append(
                 #         lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
                 #     )
-                # except RuntimeError: # Out of memory
-                #     oom = True
+                except RuntimeError: # Out of memory
+                    oom = True
 
-                last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
-                outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+                if oom:
+                    pdb.set_trace()
 
-                scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
             return torch.cat(score, dim=-1)
 
                 # if oom:
