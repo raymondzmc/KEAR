@@ -252,14 +252,19 @@ class Model(PreTrainedModel):
             if input_ids.size(0) != 1:
                 raise Exception("Break input only supported for batch size = 1!") 
 
-            # Clear cache to save memory
-            torch.cuda.empty_cache()
+            last_hidden_state = []
 
             # Perform a separate inference for each choice to save memory (more time)
-            last_hidden_state = torch.cat([
-                lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
-                for i in range(self.num_choices)
-            ], dim=0)
+            for i in range(self.num_choices):
+
+                # Clear cache to save memory
+                torch.cuda.empty_cache()
+
+                last_hidden_state.append(
+                    lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+                )
+            
+            last_hidden_state = torch.cat(last_hidden_state, dim=0)
 
             outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
         else:
