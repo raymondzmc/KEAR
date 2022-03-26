@@ -252,7 +252,7 @@ class Model(PreTrainedModel):
             if input_ids.size(0) != 1:
                 raise Exception("Break input only supported for batch size = 1!") 
 
-            last_hidden_state = []
+            scores = []
 
             # Perform a separate inference for each choice to save memory (more time)
             for i in range(self.num_choices):
@@ -260,21 +260,29 @@ class Model(PreTrainedModel):
                 # Clear cache to save memory
                 gc.collect()
                 torch.cuda.empty_cache()
-                oom = False
+                # oom = False
 
-                try:
-                    last_hidden_state.append(
-                        lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
-                    )
-                except RuntimeError: # Out of memory
-                    oom = True
 
-                if oom:
-                    pdb.set_trace()
+                # try:
+                #     last_hidden_state.append(
+                #         lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+                #     )
+                # except RuntimeError: # Out of memory
+                #     oom = True
+
+                last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+                outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+
+                scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
+            return torch.cat(score, dim=-1)
+
+                # if oom:
+                #     pdb.set_trace()
             
-            last_hidden_state = torch.cat(last_hidden_state, dim=0)
+            # outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+            # last_hidden_state = torch.cat(last_hidden_state, dim=0)
 
-            outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+            # outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
         else:
             outputs = lm(
                 input_ids=flat_input_ids,
@@ -283,7 +291,7 @@ class Model(PreTrainedModel):
                 inputs_embeds=inputs_embeds,
             )
 
-        return self.scorer[dataset_name](outputs, attention_mask)
+        return self.scorer[dataset_name](outputs, attention_mask[:, 0:3])
 
 
     def predict(self, idx, input_ids, attention_mask, token_type_ids):
