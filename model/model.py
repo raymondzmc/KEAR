@@ -16,6 +16,7 @@ from transformers import (
     ElectraModel, ElectraConfig, RobertaModel, RobertaConfig,
     load_tf_weights_in_electra
 )
+from transformers.modeling_outputs import BaseModelOutput
 import logging
 
 import pdb
@@ -58,6 +59,7 @@ class Model(PreTrainedModel):
         scorer[opt['data_version']] = ChoicePredictor(config, opt)
         self.scorer = nn.ModuleDict(scorer)
         self.hidden_size = config.hidden_size
+        self.num_choices = opt['num_choices']
         if self.my_config.get('adv_train', False):
             if self.my_config.get('adv_sift', False):
                 adv_modules = hook_sift_layer(self, hidden_size=self.hidden_size, 
@@ -209,10 +211,8 @@ class Model(PreTrainedModel):
         choice_mask, labels, dataset_name, mode = batch[-4:]
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
-        if self.my_config.break_input:
-            pdb.set_trace()
-        else:
-            logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+        
+        logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
         
         label_to_use = labels
         clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
@@ -246,12 +246,31 @@ class Model(PreTrainedModel):
         flat_attention_mask = attention_mask.view(-1, attention_mask.size(-1))
         flat_token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1))
         lm = self.lm()
-        outputs = lm(
-            input_ids=flat_input_ids,
-            attention_mask=flat_attention_mask,
-            token_type_ids=flat_token_type_ids,
-            inputs_embeds=inputs_embeds,
-        )
+
+        if self.my_config['break_input']:
+
+            if input_ids.size(0) != 1:
+                raise Exception("Break input only supported for batch size = 1!") 
+
+            
+            # Perform a separate inference for each choice to save memory (more time)
+            last_hidden_state = torch.cat([
+                lm(flat_input_ids[[i]],
+                   flat_attention_mask[[i]],
+                   flat_token_type_ids[[i]],
+                   inputs_embeds)['last_hidden_state']
+                for i in range(self.num_choices)
+            ], dim=0)
+
+            outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+        else:
+            outputs = lm(
+                input_ids=flat_input_ids,
+                attention_mask=flat_attention_mask,
+                token_type_ids=flat_token_type_ids,
+                inputs_embeds=inputs_embeds,
+            )
+
         return self.scorer[dataset_name](outputs, attention_mask)
 
 
