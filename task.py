@@ -235,6 +235,7 @@ def get_args():
 
     # Our defined parameters
     parser.add_argument('--interpret', action='store_true', help='Whether to interp model decisions.')
+    parser.add_argument('--break_input', action='store_true', help='Break the input and performance inference with each choice separately.')
 
     parser = deepspeed.add_config_arguments(parser)
 
