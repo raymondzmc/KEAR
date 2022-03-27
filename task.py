@@ -483,7 +483,7 @@ if __name__ == '__main__':
                 'attritions': attritions,
                 'probs': probs,
             }
-            with open(os.path.join(args.predict_dir, 'output.json'), 'w+') as f:
+            with open(os.path.join(args.predict_dir, 'token_saliency.json'), 'w+') as f:
                 json.dump(visualize_output, f, indent=4)
         else:
             idx, result, label, predict = srt.trial(dataloader)
