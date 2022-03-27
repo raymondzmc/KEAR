@@ -212,14 +212,13 @@ class Model(PreTrainedModel):
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
         if self.my_config['break_input']:
-            pdb.set_trace()
             logits = torch.cat([
                 self._forward(
                     idx,
-                    input_ids,
-                    attention_mask,
-                    token_type_ids,
-                    question_mask,
+                    input_ids[:, [i]],
+                    attention_mask[:, [i]],
+                    token_type_ids[:, [i]],
+                    question_mask[:, [i]],
                     dataset_name
                 )
                 for i in range(self.num_choices)
