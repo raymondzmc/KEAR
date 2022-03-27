@@ -211,8 +211,20 @@ class Model(PreTrainedModel):
         choice_mask, labels, dataset_name, mode = batch[-4:]
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
-        
-        logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+        if self.my_config['break_input']:
+            logits = torch.cat([
+                self._forward(
+                    idx,
+                    input_ids,
+                    attention_mask,
+                    token_type_ids,
+                    question_mask,
+                    dataset_name
+                )
+                for i in range(self.num_choices)
+            ], dim=-1)
+        else:
+            logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
         
         label_to_use = labels
         clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
@@ -280,8 +292,6 @@ class Model(PreTrainedModel):
             return torch.cat(scores, dim=-1)
 
         else:
-            gc.collect()
-            torch.cuda.empty_cache()
             outputs = lm(
                 input_ids=flat_input_ids,
                 attention_mask=flat_attention_mask,
