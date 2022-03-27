@@ -212,6 +212,7 @@ class Model(PreTrainedModel):
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
         if self.my_config['break_input']:
+            pdb.set_trace()
             logits = torch.cat([
                 self._forward(
                     idx,
@@ -259,45 +260,45 @@ class Model(PreTrainedModel):
         flat_token_type_ids = token_type_ids.view(-1, token_type_ids.size(-1))
         lm = self.lm()
 
-        if self.my_config['break_input']:
+        # if self.my_config['break_input']:
 
-            if input_ids.size(0) != 1:
-                raise Exception("Break input only supported for batch size = 1!") 
+        #     if input_ids.size(0) != 1:
+        #         raise Exception("Break input only supported for batch size = 1!") 
 
-            scores = []
+        #     scores = []
 
-            # Perform a separate inference for each choice to save memory (more time)
-            for i in range(self.num_choices):
+        #     # Perform a separate inference for each choice to save memory (more time)
+        #     for i in range(self.num_choices):
 
-                # Clear cache to save memory
-                gc.collect()
-                torch.cuda.empty_cache()
-                oom = False
+        #         # Clear cache to save memory
+        #         gc.collect()
+        #         torch.cuda.empty_cache()
+        #         oom = False
 
 
-                try:
-                    last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
-                    outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
-                    scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
+        #         try:
+        #             last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+        #             outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+        #             scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
 
-                    del last_hidden_state, outputs
+        #             del last_hidden_state, outputs
 
-                except RuntimeError: # Out of memory
-                    oom = True
+        #         except RuntimeError: # Out of memory
+        #             oom = True
 
-                if oom:
-                    stats = torch.cuda.memory_stats(device=0)
-                    pdb.set_trace()
+        #         if oom:
+        #             stats = torch.cuda.memory_stats(device=0)
+        #             pdb.set_trace()
 
-            return torch.cat(scores, dim=-1)
+        #     return torch.cat(scores, dim=-1)
 
-        else:
-            outputs = lm(
-                input_ids=flat_input_ids,
-                attention_mask=flat_attention_mask,
-                token_type_ids=flat_token_type_ids,
-                inputs_embeds=inputs_embeds,
-            )
+        # else:
+        outputs = lm(
+            input_ids=flat_input_ids,
+            attention_mask=flat_attention_mask,
+            token_type_ids=flat_token_type_ids,
+            inputs_embeds=inputs_embeds,
+        )
 
         return self.scorer[dataset_name](outputs, attention_mask)
 
