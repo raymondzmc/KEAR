@@ -287,7 +287,7 @@ class Model(PreTrainedModel):
                 inputs_embeds=inputs_embeds,
             )
 
-        return self.scorer[dataset_name](outputs, attention_mask[:, 0:3])
+        return self.scorer[dataset_name](outputs, attention_mask)
 
 
     def predict(self, idx, input_ids, attention_mask, token_type_ids):
