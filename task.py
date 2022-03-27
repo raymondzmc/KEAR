@@ -131,7 +131,7 @@ class SelectReasonableText:
         c = 0
         for batch in looper:
             c+=1
-            if c > 100:
+            if c > 200:
                 break
             # clip batch based on max length
             batch = clip_batch(batch)
