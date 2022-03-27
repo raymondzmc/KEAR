@@ -23,6 +23,7 @@ import deepspeed
 import time
 import logging
 import pdb
+import gc
 logger = logging.getLogger(__name__)
 
 class Trainer(BaseTrainer):
@@ -112,10 +113,34 @@ class Trainer(BaseTrainer):
         if self.deepspeed:
             self.model.backward(loss)
         elif self.fp16 == 1:
+            oom = False
+            
+            try:
+                self.scaler.scale(loss).backward()
+        #             last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
+        #             outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
+        #             scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
+
+        #             del last_hidden_state, outputs
+
+            except RuntimeError: # Out of memory
+                oom = True
+
+            if oom:
+                stats = torch.cuda.memory_stats(device=0)
+                pdb.set_trace()
+
+            loss_item = loss.item()
+            del loss
             torch.cuda.empty_cache()
-            self.scaler.scale(loss).backward()
+
+            
         else:
-            loss.backward()         
+            loss.backward()
+            loss_item = loss.item()
+            del loss
+            torch.cuda.empty_cache()
+         
         self.global_step += 1
         if self.global_step % self.config.gradient_acc_step == 0:
             if self.deepspeed:
@@ -133,7 +158,7 @@ class Trainer(BaseTrainer):
                     self.optimizer.step()
                 self.scheduler.step()
                 self.model.zero_grad()
-        return loss
+        return loss_item
 
     def deepspeed_wrap(self, optimizer=None, scheduler=None):
         if self.deepspeed:
