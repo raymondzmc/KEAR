@@ -267,24 +267,18 @@ class Model(PreTrainedModel):
                     last_hidden_state = lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
                     outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
                     scores.append(self.scorer[dataset_name](outputs, attention_mask[:, [i]]))
-                #     last_hidden_state.append(
-                #         lm(flat_input_ids[[i]], flat_attention_mask[[i]], flat_token_type_ids[[i]], inputs_embeds)['last_hidden_state']
-                #     )
+
+                    del last_hidden_state, outputs
+
                 except RuntimeError: # Out of memory
                     oom = True
 
                 if oom:
+                    stats = torch.cuda.memory_stats(device=0)
                     pdb.set_trace()
 
-            return torch.cat(score, dim=-1)
+            return torch.cat(scores, dim=-1)
 
-                # if oom:
-                #     pdb.set_trace()
-            
-            # outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
-            # last_hidden_state = torch.cat(last_hidden_state, dim=0)
-
-            # outputs = BaseModelOutput(last_hidden_state=last_hidden_state)
         else:
             outputs = lm(
                 input_ids=flat_input_ids,
