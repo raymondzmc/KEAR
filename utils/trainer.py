@@ -112,7 +112,7 @@ class Trainer(BaseTrainer):
         if self.deepspeed:
             self.model.backward(loss)
         elif self.fp16 == 1:
-            pdb.set_trace()
+            torch.cuda.empty_cache()
             self.scaler.scale(loss).backward()
         else:
             loss.backward()         
