@@ -280,6 +280,8 @@ class Model(PreTrainedModel):
             return torch.cat(scores, dim=-1)
 
         else:
+            gc.collect()
+            torch.cuda.empty_cache()
             outputs = lm(
                 input_ids=flat_input_ids,
                 attention_mask=flat_attention_mask,
