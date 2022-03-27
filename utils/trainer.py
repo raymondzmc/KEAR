@@ -140,7 +140,7 @@ class Trainer(BaseTrainer):
             loss_item = loss.item()
             del loss
             torch.cuda.empty_cache()
-         
+
         self.global_step += 1
         if self.global_step % self.config.gradient_acc_step == 0:
             if self.deepspeed:
@@ -241,7 +241,12 @@ class Trainer(BaseTrainer):
             moved_batch.append(str(t) if (type(t) is np.str_ or type(t) is str) else t.to(self.device))
         batch = tuple(moved_batch)
         
-        all_result = self.model.interp(*batch, mode)
+        if self.fp16 == 1:
+            with autocast():
+                all_result = self.model.interp(*batch, mode)
+        else:
+            all_result = self.model.interp(*batch, mode)
+        
 
         if return_all:
             return all_result
