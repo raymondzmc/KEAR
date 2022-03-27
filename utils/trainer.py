@@ -112,6 +112,7 @@ class Trainer(BaseTrainer):
         if self.deepspeed:
             self.model.backward(loss)
         elif self.fp16 == 1:
+            pdb.set_trace()
             self.scaler.scale(loss).backward()
         else:
             loss.backward()         
