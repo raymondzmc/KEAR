@@ -212,6 +212,8 @@ class Model(PreTrainedModel):
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
         if self.my_config['break_input']:
+            gc.collect()
+            torch.cuda.empty_cache()
             logits = torch.cat([
                 self._forward(
                     idx,
