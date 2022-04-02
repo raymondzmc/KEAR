@@ -28,11 +28,10 @@ class DistributedResumableSampler(DistributedSampler):
         else:
             self.perm = list(range(len(self.dataset)))
 
-        try:
-            assert len(self.perm) == self.total_size
-        except:
-            print(f"perm{len(self.perm)}, {self.total_size}")
-            pdb.set_trace()
+        # try:
+        #     assert len(self.perm) == self.total_size
+        # except:
+        #     print(f"perm{len(self.perm)}, {self.total_size}")
         self.current_idx = self.rank
 
         while self.current_idx < self.total_size:
