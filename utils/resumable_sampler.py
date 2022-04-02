@@ -4,7 +4,7 @@ from torch.utils.data.sampler import Sampler
 import torch
 from torch.utils.data.distributed import DistributedSampler
 from typing import Iterator, Optional, Sequence, List, TypeVar, Generic, Sized
-
+import pdb
         
 
 class DistributedResumableSampler(DistributedSampler):
@@ -31,7 +31,8 @@ class DistributedResumableSampler(DistributedSampler):
         try:
             assert len(self.perm) == self.total_size
         except:
-            print(self.perm, self.total_size)
+            print(f"perm{len(self.perm)}, {self.total_size}")
+            pdb.set_trace()
         self.current_idx = self.rank
 
         while self.current_idx < self.total_size:
