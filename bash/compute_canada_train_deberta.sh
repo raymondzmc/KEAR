@@ -1,7 +1,14 @@
+module load python
+export HF_HOME="/project/def-carenini/liraymo6"
+
+
+source /home/liraymo6/virtualenvs/commonsense/bin/activate
+
 export DATA_DIR="data/"
 export OUTPUT_DIR="results/debertav3-large/"
 export TOKENIZERS_PARALLELISM=false
 export LOADMODEL_ERROR=0
+export CUDA_VISIBLE_DEVICES=0,1
 
 # deepspeed task.py --append_descr 1 --append_triples --append_retrieval 1 --data_version csqa_ret_3datasets --lr 5e-6 \
 #       --append_answer_text 1 --weight_decay 0 --preset_model_type debertav2-xlarge --batch_size 1 --max_seq_length 50 
@@ -17,8 +24,8 @@ export LOADMODEL_ERROR=0
 # DeBERTa LR: {4e−6, 6e−6, 9e−6}
 # VAT:  α ∈ {0.1, 1.0, 10.0}, ε = 1e−5
 
-python task.py --data_version csqa_ret_3datasets --append_descr 1 --append_retrieval 1 --append_triples --append_answer_text 1 \
+deepspeed task.py --data_version csqa_ret_3datasets --append_descr 1 --append_retrieval 1 --append_triples --append_answer_text 1 \
                --preset_model_type debertav3-large --optimizer_type adamw --lr 4e-6 --weight_decay 0.01 --warmup_proportion 0.1 --max_seq_length 512 \
-               --batch_size 1 --gradient_acc_step 48 --num_train_epochs 10 --save_interval_step 100 --print_loss_step 10 --print_number_per_epoch 2  \
-               --continue_train --clear_output_folder --vary_segment_id  --seed 42 --local_rank 0 --fp16 1 \
-               --output_model_dir results/debertav3-large/ --break_input
+               --batch_size 4 --gradient_acc_step 12 --num_train_epochs 10 --save_interval_step 100 --print_loss_step 10 --print_number_per_epoch 2  \
+               --continue_train --clear_output_folder --vary_segment_id  --seed 42 --local_rank 0 --fp16 0 --save_every \
+               --output_model_dir results/debertav3-large/ --ddp --deepspeed

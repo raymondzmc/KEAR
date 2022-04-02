@@ -121,7 +121,7 @@ class BaseTrainer:
                 'epoch': epoch,
                 'tb_step': self.tb_step,
             }
-            json.dump(training_info, open(os.path.join(output_dir, 'training_info.json'), 'w') )
+            json.dump(training_info, open(os.path.join(output_dir, 'training_info.json'), 'w'), indent=4)
 
         if self.multi_gpu:
             dist.barrier()
