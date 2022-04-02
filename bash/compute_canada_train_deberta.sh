@@ -3,7 +3,7 @@
 # SBATCH --cpus-per-task=12  # Cores proportional to GPUs: 6 on Cedar, 16 on Graham.
 # SBATCH --mem=64000M       # Memory proportional to GPUs: 32000 Cedar, 64000 Graham.
 # SBATCH --time=2-0:00
-# SBATCH --output=train_debertava-large.out
+# SBATCH --output=train_debertav3-large.out
 
 module load python
 export HF_HOME="/project/def-carenini/liraymo6"
