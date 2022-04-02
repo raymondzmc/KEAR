@@ -27,7 +27,11 @@ class DistributedResumableSampler(DistributedSampler):
             self.perm = torch.randperm(len(self.dataset), generator=g).tolist()
         else:
             self.perm = list(range(len(self.dataset)))
-        assert len(self.perm) == self.total_size
+
+        try:
+            assert len(self.perm) == self.total_size
+        except:
+            print(self.perm, self.total_size)
         self.current_idx = self.rank
 
         while self.current_idx < self.total_size:

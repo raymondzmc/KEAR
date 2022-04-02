@@ -442,13 +442,13 @@ if __name__ == '__main__':
     if args.mission == 'train':
 
         train_loader_cached_path = os.path.join(args.output_model_dir, 'train_dataloader.pth')
-        if not os.path.isfile(train_loader_cached_path):
-            train_dataloader = make_dataloader(
-                experiment, train_data, tokenizer, total_batch_size=args.total_batch_size,
-                drop_last=False, max_seq_length=args.max_seq_length, vary_segment_id=args.vary_segment_id, config=args, seed=this_seed)  # 52 + 3
-            torch.save(train_dataloader, train_loader_cached_path)
-        else:
-            train_dataloader = torch.load(train_loader_cached_path)
+        train_dataloader = make_dataloader(
+            experiment, train_data, tokenizer, total_batch_size=args.total_batch_size,
+            drop_last=False, max_seq_length=args.max_seq_length, vary_segment_id=args.vary_segment_id, config=args, seed=this_seed)  # 52 + 3
+        # if not os.path.isfile(train_loader_cached_path):
+        #     torch.save(train_dataloader, train_loader_cached_path)
+        # else:
+        #     train_dataloader = torch.load(train_loader_cached_path)
 
         print('train_data %d ' % len(train_data))
         train_dataloader = DataLoaderSampler(train_dataloader, args.data_version)
