@@ -34,7 +34,8 @@ class DistributedResumableSampler(DistributedSampler):
         #     print(f"perm{len(self.perm)}, {self.total_size}")
         self.current_idx = self.rank
 
-        while self.current_idx < self.total_size:
+        # while self.current_idx < self.total_size:
+        while self.current_idx < len(self.perm):
             self.current_idx += self.num_replicas
             yield self.perm[self.current_idx - self.num_replicas]
         
