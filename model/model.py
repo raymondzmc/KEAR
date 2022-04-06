@@ -200,7 +200,7 @@ class Model(PreTrainedModel):
                         baseline,
                         batch_size=5,
                         use_expectation=False,
-                        num_samples=50,
+                        num_samples=25,
                     ).squeeze(0)[:input_len, :input_len].tolist()
                 )
             else:
