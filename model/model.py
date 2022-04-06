@@ -201,8 +201,8 @@ class Model(PreTrainedModel):
                         explainer.interactions(
                             embedding_output[[choice_idx]],
                             baseline,
-                            batch_size=1,
-                            num_samples=5,
+                            batch_size=2,
+                            num_samples=10,
                             use_expectation=False,
                             interaction_mask=question_mask[:, choice_idx],
                         ).squeeze(0)[:input_len, :input_len].tolist()

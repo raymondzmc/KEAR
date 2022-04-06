@@ -233,10 +233,8 @@ class EmbeddingExplainerTorch(object):
                     grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
                     create_graph=True)[0].detach()
 
-        pdb.set_trace()
         if interaction_index is not None:
-            batch_difference = batch_difference[tuple([slice(None)] + \
-                                                                 interaction_index)]
+            batch_difference = batch_difference[tuple([slice(None)] + interaction_index)]
             for _ in range(len(batch_input.shape) - 1):
                 batch_difference = batch_difference.unsqueeze(-1)
         else:
