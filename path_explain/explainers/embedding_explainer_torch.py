@@ -48,6 +48,7 @@ class EmbeddingExplainerTorch(object):
                 shape_tuple = [inputs.shape[0], inputs.shape[1], inputs.shape[1]]
                 shape_tuple = tuple(shape_tuple)
             else:
+                pdb.set_trace()
                 # TODO: Need to fix for different size masks
                 shape_tuple = [inputs.shape[0], int(interaction_mask.sum()), inputs.shape[1]]
                 shape_tuple = tuple(shape_tuple)
