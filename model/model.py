@@ -82,7 +82,7 @@ class Model(PreTrainedModel):
         self.init_weights()
         self.requires_grad = {}
 
-        self.interpret = opt['interpretation_method'] != None
+        self.interpret = opt['interpret_method'] != None
 
         print('init model finished.')
 
