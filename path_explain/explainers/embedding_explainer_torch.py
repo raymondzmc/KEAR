@@ -391,7 +391,7 @@ class EmbeddingExplainerTorch(object):
         current_beta = torch.reshape(current_beta, (num_samples,) + \
                                  (1,) * (len(current_input.shape) - 1))
         attribution_array = []
-        for j in tqdm(range(0, num_samples, batch_size)):
+        for j in range(0, num_samples, batch_size):
             number_to_draw = min(batch_size, num_samples - j)
 
             batch_baseline = self._sample_baseline(current_baseline,
