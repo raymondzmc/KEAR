@@ -19,6 +19,7 @@ from utils import my_dist
 import deepspeed
 from transformers import AutoConfig
 import pdb
+import math
 
 import logging; logging.getLogger("transformers").setLevel(logging.WARNING)
 logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -247,7 +248,7 @@ def get_args():
     # Our defined parameters
     parser.add_argument('--interpret_method', default=None, help='Method for model interpretation.')
     parser.add_argument('--partition', type=int, default=None, help='Partition of the dataloader to evaluate (interpretation).')
-    parser.add_argument('--partition_size', type=int, default=100,  help='Maximum size of each dataloader partition.')
+    parser.add_argument('--num_partitions', type=int, default=10,  help='Number of dataloader partition.')
     parser.add_argument('--break_input', action='store_true', help='Break the input and performance inference with each choice separately.')
 
     parser = deepspeed.add_config_arguments(parser)
@@ -346,6 +347,7 @@ def get_args():
     if args.pred_file_name is not None:
         args.pred_file_name = os.path.join(args.predict_dir, args.pred_file_name)
         print('output to:', args.pred_file_name)
+
     if args.output_model_dir is None:
         args.output_model_dir = os.environ['OUTPUT_DIR']
         if args.test_mode:
@@ -466,8 +468,22 @@ if __name__ == '__main__':
         print('train_data %d ' % len(train_data))
         train_dataloader = DataLoaderSampler(train_dataloader, args.data_version)
 
-    if args.mission == 'output' and args.interpret_method != 'None':
-        pdb.set_trace()
+    # For model interpretation, use partitons of dataloader for more efficient runtime
+    if args.mission == 'output' and args.interpret_method != 'None' and args.partition != None:
+        if args.partition >= args.num_partitions:
+            raise ValueError(f"Partition index \"{args.partition}\" is out of range for a total number of \"{num_partitions}\" partition")
+
+        partition_size = math.ceil(len(devlp_data) / args.num_partitions)
+
+        partition_indices = [(i * partition_size, i * partition_size + partition_size) for i in range(args.num_partitions)]
+        partition_start, partition_end = partition_indices[args.partition]
+        devlp_data = devlp_data[partition_start : partition_end]
+
+        # Create sub-directories for each dataloader partition
+        args.predict_dir = args.predict_dir + f'_{args.partition}_{args.num_partitions}'
+        Path(args.predict_dir).mkdir(exist_ok=True, parents=True)
+        pred_file_name = os.path.basename(args.pred_file_name)
+        args.pred_file_name = os.path.join(args.predict_dir, pred_file_name)
 
     devlp_dataloader = make_dataloader(
             experiment, devlp_data, tokenizer, total_batch_size=args.total_batch_size,

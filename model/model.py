@@ -176,7 +176,7 @@ class Model(PreTrainedModel):
             input_size = self._to_tensor(idx.size(0), idx.device)
 
             embedding_output = self.embed_encode(input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
-
+            pdb.set_trace()
             saliency_map = []
             for choice_idx in range(choice_mask.shape[-1]):
                 input_len = int(attention_mask[:, [choice_idx]].sum().item())
