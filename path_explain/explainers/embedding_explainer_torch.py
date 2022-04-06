@@ -144,7 +144,8 @@ class EmbeddingExplainerTorch(object):
                               batch_alphas,
                               output_index=None,
                               second_order=False,
-                              interaction_index=None):
+                              interaction_index=None,
+                              interaction_mask=None):
         
         if not second_order:
             batch_difference = batch_input - batch_baseline
@@ -189,7 +190,7 @@ class EmbeddingExplainerTorch(object):
                     create_graph=True)[0]
         
         batch_gradients = batch_gradients * batch_difference_beta
-
+        pdb.set_trace()
         if interaction_index is not None:
             batch_gradients = batch_gradients[tuple([slice(None)] + interaction_index)]
         else:
@@ -364,7 +365,7 @@ class EmbeddingExplainerTorch(object):
     def _single_interaction(self, current_input, current_baseline,
                             current_alphas, num_samples, batch_size,
                             use_expectation, output_index,
-                            interaction_index):
+                            interaction_index, interaction_mask):
         """
         A helper function to compute path
         interactions for a single sample.
@@ -421,7 +422,7 @@ class EmbeddingExplainerTorch(object):
     def interactions(self, inputs, baseline,
                      batch_size=50, num_samples=100,
                      use_expectation=True, output_indices=None,
-                     verbose=False, interaction_index=None):
+                     verbose=False, interaction_index=None, interaction_mask=None):
         """
         A function to compute path interactions (attributions of
         attributions) on the given inputs.
@@ -511,6 +512,7 @@ class EmbeddingExplainerTorch(object):
                                                                 batch_size,
                                                                 use_expectation,
                                                                 None,
-                                                                interaction_index)
+                                                                interaction_index,
+                                                                interaction_mask)
                 interactions[i] = current_interactions
         return interactions
