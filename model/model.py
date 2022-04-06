@@ -163,7 +163,7 @@ class Model(PreTrainedModel):
         return self.scorer[dataset_name]((sequence_output,), attention_mask)
 
 
-    def interpret(self, *batch):
+    def forward(self, *batch):
         """
         batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
         """
@@ -249,53 +249,52 @@ class Model(PreTrainedModel):
         return loss, right_num, input_size, clf_logits, adv_norm, saliency_map
 
 
-    def forward(self, *batch):
-        print("interpret")
-        """
-        batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
-        """
-        choice_mask, labels, dataset_name, mode = batch[-4:]
-        idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
+    # def forward(self, *batch):
+    #     """
+    #     batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
+    #     """
+    #     choice_mask, labels, dataset_name, mode = batch[-4:]
+    #     idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
-        if self.my_config['break_input']:
-            gc.collect()
-            torch.cuda.empty_cache()
-            logits = torch.cat([
-                self._forward(
-                    idx,
-                    input_ids[:, [i]],
-                    attention_mask[:, [i]],
-                    token_type_ids[:, [i]],
-                    question_mask[:, [i]],
-                    dataset_name
-                )
-                for i in range(self.num_choices)
-            ], dim=-1)
-        else:
-            logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+    #     if self.my_config['break_input']:
+    #         gc.collect()
+    #         torch.cuda.empty_cache()
+    #         logits = torch.cat([
+    #             self._forward(
+    #                 idx,
+    #                 input_ids[:, [i]],
+    #                 attention_mask[:, [i]],
+    #                 token_type_ids[:, [i]],
+    #                 question_mask[:, [i]],
+    #                 dataset_name
+    #             )
+    #             for i in range(self.num_choices)
+    #         ], dim=-1)
+    #     else:
+    #         logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
         
-        label_to_use = labels
-        clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
+    #     label_to_use = labels
+    #     clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
 
-        loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
-        adv_loss = torch.zeros_like(loss)
-        adv_norm = torch.zeros_like(loss)
-        if self.my_config.get('adv_train', False) and mode == 'train':
-            if self.my_config.get('adv_sift', False):
-                adv_loss, adv_norm = self.adv_teacher.loss(logits, self._forward, self.my_config['grad_adv_loss'], 
-                    self.my_config['adv_loss'], idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
-                loss = loss + self.my_config['adv_alpha'] * adv_loss
-            else:
-                adv_loss, adv_norm, adv_logits = self.adv_teacher.forward(self, logits, idx, input_ids, token_type_ids, attention_mask, question_mask, dataset_name)
-                if adv_loss is None:
-                    adv_loss = torch.zeros_like(loss)
-                    adv_norm = adv_loss
-                loss = loss + self.my_config['adv_alpha'] * adv_loss
-        input_size = self._to_tensor(idx.size(0), idx.device)
-        with torch.no_grad():
-            predicts = torch.argmax(clf_logits, dim=1)
-            right_num = (predicts == labels)
-        return loss, right_num, input_size, clf_logits, adv_norm
+    #     loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
+    #     adv_loss = torch.zeros_like(loss)
+    #     adv_norm = torch.zeros_like(loss)
+    #     if self.my_config.get('adv_train', False) and mode == 'train':
+    #         if self.my_config.get('adv_sift', False):
+    #             adv_loss, adv_norm = self.adv_teacher.loss(logits, self._forward, self.my_config['grad_adv_loss'], 
+    #                 self.my_config['adv_loss'], idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+    #             loss = loss + self.my_config['adv_alpha'] * adv_loss
+    #         else:
+    #             adv_loss, adv_norm, adv_logits = self.adv_teacher.forward(self, logits, idx, input_ids, token_type_ids, attention_mask, question_mask, dataset_name)
+    #             if adv_loss is None:
+    #                 adv_loss = torch.zeros_like(loss)
+    #                 adv_norm = adv_loss
+    #             loss = loss + self.my_config['adv_alpha'] * adv_loss
+    #     input_size = self._to_tensor(idx.size(0), idx.device)
+    #     with torch.no_grad():
+    #         predicts = torch.argmax(clf_logits, dim=1)
+    #         right_num = (predicts == labels)
+    #     return loss, right_num, input_size, clf_logits, adv_norm
 
     def _forward(self, idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name='csqa', inputs_embeds=None, return_raw=False):
         if inputs_embeds is None:
