@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
-
+from path_explain import EmbeddingExplainerTorch
 from .layers import ChoicePredictor
 import torch
 import torch.nn as nn
@@ -151,44 +151,88 @@ class Model(PreTrainedModel):
         embedding_output = lm.embeddings(flat_input_ids, flat_token_type_ids)
         return embedding_output
 
+    def _interpret_forward(self, embedding_output, attention_mask, dataset_name='csqa'):
+        flat_attention_mask = attention_mask.view(-1, attention_mask.size(-1))
+        lm = self.lm()
+        encoder_outputs = lm.encoder(
+            embedding_output,
+            flat_attention_mask,
+        )
+        encoded_layers = encoder_outputs[1]
+        sequence_output = encoded_layers[-1]
+        return self.scorer[dataset_name]((sequence_output,), attention_mask)
 
 
-    def interp(self, *batch):
+    def interpret(self, *batch):
         """
         batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
         """
-        choice_mask, labels, dataset_name, mode = batch[-4:]
+        choice_mask, labels, dataset_name, method = batch[-4:]
         idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
-        # lm_embeddings = self.embed_encode(input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
         input_size = self._to_tensor(idx.size(0), idx.device)
 
-        def forward_func(input_ids, index=0):
-            pred = self._forward(idx,
-                                 input_ids[:, [index]],
-                                 attention_mask[:, [index]],
-                                 token_type_ids[:, [index]],
-                                 question_mask,
-                                 dataset_name)
-            return pred[0]
+        embedding_output = self.embed_encode(input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
+
+        saliency_map = []
+        for choice_idx in range(choice_mask.shape[-1]):
+            input_len = int(attention_mask[:, [choice_idx]].sum().item())
+            explainer = EmbeddingExplainerTorch(
+                model=lambda x: self._interpret_forward(x, attention_mask[:, [choice_idx]], dataset_name=dataset_name),
+                embedding_axis=-1,
+            )
+
+            baseline = torch.zeros((1,) + embedding_output[[choice_idx]].shape[1:], device=embedding_output.device)
+
+            if method == 'attribution':
+                saliency_map.append(
+                    explainer.attributions(
+                        embedding_output[[choice_idx]],
+                        baseline,
+                        batch_size=4,
+                        use_expectation=False,
+                    ).squeeze(0)[:input_len].tolist()
+                )
+            elif method == 'interaction':
+                saliency_map.append(
+                    explainer.interactions(
+                        embedding_output[[choice_idx]],
+                        baseline,
+                        batch_size=4,
+                        use_expectation=False,
+                        num_samples=50,
+                    ).squeeze(0)[:input_len, :input_len].tolist()
+                )
+            else:
+                raise NotImplementedError("\"interpretation_method\" not supported!")
 
 
-        attritions = []
-        lig = LayerIntegratedGradients(forward_func, self.deberta.embeddings.word_embeddings)
+        # scores = self._interpret_forward(lm_embeddings, attention_mask)
+        # def forward_func(input_ids, index=0):
+        #     pred = self._forward(idx,
+        #                          input_ids[:, [index]],
+        #                          attention_mask[:, [index]],
+        #                          token_type_ids[:, [index]],
+        #                          question_mask,
+        #                          dataset_name)
+        #     return pred[0]
+
+
+        # attritions = []
+        # lig = LayerIntegratedGradients(forward_func, self.deberta.embeddings.word_embeddings)
         # lm_embeddings.requires_grad_()
-        for index in range(choice_mask.size(1)):
-            torch.cuda.empty_cache()
-            attr = lig.attribute(inputs=(input_ids),
-                                 additional_forward_args=(0),
-                                 n_steps=50,
-                                 internal_batch_size=1)
-            attr = attr.sum(dim=-1).squeeze(0)
-            attr = attr / torch.norm(attr)
-            attritions.append(attr.tolist())
+        # for index in range(choice_mask.size(1)):
+        #     torch.cuda.empty_cache()
+        #     attr = lig.attribute(inputs=(input_ids),
+        #                          additional_forward_args=(0),
+        #                          n_steps=50,
+        #                          internal_batch_size=1)
+        #     attr = attr.sum(dim=-1).squeeze(0)
+        #     attr = attr / torch.norm(attr)
+        #     attritions.append(attr.tolist())
 
 
         with torch.no_grad():
             logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
-
 
         label_to_use = labels
         clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
@@ -202,7 +246,7 @@ class Model(PreTrainedModel):
         with torch.no_grad():
             predicts = torch.argmax(clf_logits, dim=1)
             right_num = (predicts == labels)
-        return loss, right_num, input_size, clf_logits, adv_norm, attritions
+        return loss, right_num, input_size, clf_logits, adv_norm, saliency_map
 
 
     def forward(self, *batch):

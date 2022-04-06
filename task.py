@@ -131,7 +131,7 @@ class SelectReasonableText:
         c = 0
         for batch in looper:
             c+=1
-            if c > 200:
+            if c > 10:
                 break
             # clip batch based on max length
             batch = clip_batch(batch)
@@ -141,7 +141,11 @@ class SelectReasonableText:
                 batch = list(batch[:-2]) + [torch.zeros_like(batch[-2]), batch[-1]]
                 batch = tuple(batch)
 
-            loss, right_num, input_size, logits, adv_loss, attr = self.trainer._interp_forward(batch, None, mode='dev', dataset_name=using_dataset_name, return_all=True)
+            loss, right_num, input_size, logits, adv_loss, saliency_map = self.trainer._interpret(
+                batch,
+                dataset_name=using_dataset_name,
+                method=self.config.interpret_method,
+            )
             idx.extend(batch[0].cpu().numpy().tolist())
             result.extend(logits.detach().cpu().numpy().tolist())
             labels.extend(this_label.numpy().tolist())
@@ -234,7 +238,7 @@ def get_args():
 
 
     # Our defined parameters
-    parser.add_argument('--interpret', action='store_true', help='Whether to interp model decisions.')
+    parser.add_argument('--interpret_method', default=None, help='Method for model interpretation.')
     parser.add_argument('--break_input', action='store_true', help='Break the input and performance inference with each choice separately.')
 
     parser = deepspeed.add_config_arguments(parser)
@@ -476,12 +480,13 @@ if __name__ == '__main__':
         dataset_name = args.data_version
         dataloader = devlp_dataloaders[dataset_name]
 
-        if args.interpret:
-            idx, result, label, predict, tokens, attritions, probs = srt.interpret(dataloader, tokenizer)
+        if args.interpret_method != None:
+            idx, result, labels, predict, tokens, attritions, probs = srt.interpret(dataloader, tokenizer)
             visualize_output = {
                 'tokens': tokens,
                 'attritions': attritions,
                 'probs': probs,
+                'labels': labels,
             }
             with open(os.path.join(args.predict_dir, 'token_saliency.json'), 'w+') as f:
                 json.dump(visualize_output, f, indent=4)

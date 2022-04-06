@@ -202,7 +202,7 @@ class Trainer(BaseTrainer):
         return loss, all_result
 
 
-    def _interp_forward(self, batch, record, dataset_name=None, mode='interp', return_all=False):
+    def _interpret(self, batch, dataset_name=None, method='attribution'):
         if dataset_name is None:
             dataset_name = batch[-1]
         else:
@@ -219,23 +219,12 @@ class Trainer(BaseTrainer):
         
         if self.fp16 == 1:
             with autocast():
-                all_result = self.model.interp(*batch, mode)
+                all_result = self.model.interpret(*batch, method)
         else:
-            all_result = self.model.interp(*batch, mode)
+            all_result = self.model.interpret(*batch, method)
         
 
-        if return_all:
-            return all_result
-        loss, right_num, input_size, logits, adv_norm, attritions = all_result 
-        
-        loss = loss.mean() / self.config.gradient_acc_step
-        if adv_norm is not None:
-            result = tuple([loss, right_num.sum(), input_size.sum(), adv_norm.mean(), attritions])
-        else:
-            result = tuple([loss, right_num.sum(), input_size.sum(), attritions])
-        record.inc([it.item() for it in result])        
-
-        return loss, all_result
+        return all_result
     
     def save_training_record(self, last_checkpoint=False):
         self.training_records['current_used_last_name'] = self.current_used_last_name
