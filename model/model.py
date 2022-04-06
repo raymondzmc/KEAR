@@ -250,6 +250,7 @@ class Model(PreTrainedModel):
 
 
     def forward(self, *batch):
+        print("interpret")
         """
         batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
         """
