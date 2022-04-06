@@ -120,6 +120,10 @@ class SelectReasonableText:
         return idx, result, labels, predicts
 
     def interpret(self, dataloader, tokenizer):
+
+        logger.info('setting up optimizer')
+        self.trainer.deepspeed_init_inference()
+
         using_dataset_name = self.config.data_version
         result = []
         idx = []
