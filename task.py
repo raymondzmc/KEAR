@@ -162,6 +162,9 @@ class SelectReasonableText:
             # attritions.append([values[:int(attention_mask[choice_idx].sum())] for choice_idx, values in enumerate(attr)])
             probs.append(torch.softmax(logits, dim=-1).squeeze(0).tolist())
 
+        if self.config.ddp:
+            dist.barrier()
+
         return idx, result, labels, predicts, tokens, saliency_map, probs
 
 

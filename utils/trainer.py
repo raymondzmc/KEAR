@@ -139,8 +139,14 @@ class Trainer(BaseTrainer):
     def deepspeed_wrap(self, optimizer=None, scheduler=None):
         if self.deepspeed:
             print('initializing')
-            model, optimizer, _, scheduler = deepspeed.initialize(args=self.config, model=self.model, optimizer=optimizer, 
-                                            lr_scheduler=scheduler, config=self.config.deepspeed_config)
+            model, optimizer, _, scheduler = deepspeed.initialize(
+                args=self.config,
+                model=self.model,
+                model_parameters=model.parameters(), 
+                optimizer=optimizer,
+                lr_scheduler=scheduler,
+                config=self.config.deepspeed_config
+            )
             print('initialize finish')
             self.model = model
         return optimizer, scheduler    
