@@ -104,7 +104,7 @@ class SelectReasonableText:
         idx = []
         labels = []
         predicts = []
-        # hidden_states = torch.Tensor()
+        all_hidden_states = []
         looper = tqdm(dataloader, desc='Predict') if self.config.local_rank == 0 else dataloader
         for batch in looper:
             batch = clip_batch(batch)
@@ -122,9 +122,13 @@ class SelectReasonableText:
                 result.extend(logits.cpu().numpy().tolist())
                 labels.extend(this_label.numpy().tolist())
                 predicts.extend(torch.argmax(logits, dim=1).cpu().numpy().tolist())
-                pdb.set_trace()
-                # hidden_states.append()
-        return idx, result, labels, predicts
+                all_hidden_states.append(hidden_states)
+
+        if self.config.save_hidden_states:
+            all_hidden_states = torch.cat(all_hidden_states, dim=0)
+            return idx, result, labels, predicts, all_hidden_states
+        else:
+            return idx, result, labels, predicts
 
     def interpret(self, dataloader, tokenizer):
 
@@ -521,6 +525,10 @@ if __name__ == '__main__':
             }
             with open(os.path.join(args.predict_dir, f'{args.interpret_method}_results.json'), 'w+') as f:
                 json.dump(visualize_output, f, indent=4)
+
+        elif args.save_hidden_states:
+            idx, result, labels, predict, hidden_states = srt.trial(dataloader)
+            torch.save(hidden_states, os.path.join(args.predict_dir, 'cls_hidden_states.pt'))
         else:
             idx, result, labels, predict = srt.trial(dataloader)
 
