@@ -188,7 +188,7 @@ class Model(PreTrainedModel):
                     explainer.attributions(
                         embedding_output[[choice_idx]],
                         baseline,
-                        batch_size=4,
+                        batch_size=1,
                         use_expectation=False,
                     ).squeeze(0)[:input_len].tolist()
                 )
@@ -197,7 +197,7 @@ class Model(PreTrainedModel):
                     explainer.interactions(
                         embedding_output[[choice_idx]],
                         baseline,
-                        batch_size=4,
+                        batch_size=1,
                         use_expectation=False,
                         num_samples=50,
                     ).squeeze(0)[:input_len, :input_len].tolist()

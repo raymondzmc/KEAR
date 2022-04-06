@@ -1,0 +1,1 @@
+salloc --account=def-carenini --gres=gpu:v100l:2  --cpus-per-task=3 --mem=32000M --time=2:00:00

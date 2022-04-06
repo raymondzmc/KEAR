@@ -17,5 +17,5 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 deepspeed task.py --data_version csqa_ret_3datasets --append_descr 1 --append_retrieval 1 --append_triples --append_answer_text 1 \
                --preset_model_type debertav3-large  --max_seq_length 512 --batch_size 1 --vary_segment_id  --seed 42 --local_rank 0 \
-               --predict_dir results/debertav3-large/predictions --pred_file_name pred_test.csv --fp16 1 \
-               --output_model_dir results/debertav3-large/ --interpret_method interaction --ddp --deepspeed
+               --predict_dir results/debertav3-large/predictions --pred_file_name pred_test.csv \
+               --output_model_dir results/debertav3-large/ --interpret_method interaction --ddp --deepspeed --mission output
