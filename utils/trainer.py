@@ -142,7 +142,7 @@ class Trainer(BaseTrainer):
             model, optimizer, _, scheduler = deepspeed.initialize(
                 args=self.config,
                 model=self.model,
-                model_parameters=model.parameters(), 
+                model_parameters=self.model.parameters(), 
                 optimizer=optimizer,
                 lr_scheduler=scheduler,
                 config=self.config.deepspeed_config
