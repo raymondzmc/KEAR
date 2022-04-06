@@ -14,6 +14,7 @@ export OUTPUT_DIR="results/debertav3-large/"
 export TOKENIZERS_PARALLELISM=false
 export LOADMODEL_ERROR=0
 export CUDA_VISIBLE_DEVICES=0
+export MASTER_ADDR=127.0.0.3
 
 deepspeed task.py --data_version csqa_ret_3datasets --append_descr 1 --append_retrieval 1 --append_triples --append_answer_text 1 \
                --preset_model_type debertav3-large --max_seq_length 512 --batch_size 1 --vary_segment_id  --seed 42 --local_rank 0 --mission output \
