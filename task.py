@@ -131,7 +131,7 @@ class SelectReasonableText:
         c = 0
         for batch in looper:
             c+=1
-            if c > 10:
+            if c > 3:
                 break
             # clip batch based on max length
             batch = clip_batch(batch)
@@ -155,10 +155,10 @@ class SelectReasonableText:
             attention_mask = batch[2][0]
             input_ids = batch[1][0]
             tokens.append([tokenizer.convert_ids_to_tokens(ids)[:int(attention_mask[choice_idx].sum())] for choice_idx, ids in enumerate(input_ids)])
-            attritions.append([values[:int(attention_mask[choice_idx].sum())] for choice_idx, values in enumerate(attr)])
+            # attritions.append([values[:int(attention_mask[choice_idx].sum())] for choice_idx, values in enumerate(attr)])
             probs.append(torch.softmax(logits, dim=-1).squeeze(0).tolist())
 
-        return idx, result, labels, predicts, tokens, attritions, probs
+        return idx, result, labels, predicts, tokens, saliency_map, probs
 
 
 
@@ -488,20 +488,20 @@ if __name__ == '__main__':
                 'probs': probs,
                 'labels': labels,
             }
-            with open(os.path.join(args.predict_dir, 'token_saliency.json'), 'w+') as f:
+            with open(os.path.join(args.predict_dir, 'interpretation_results.json'), 'w+') as f:
                 json.dump(visualize_output, f, indent=4)
         else:
-            idx, result, label, predict = srt.trial(dataloader)
+            idx, result, labels, predict = srt.trial(dataloader)
 
         content = ''
         length = len(result)
         right = 0
         for i, item in enumerate(tqdm(result)):
-            if predict[i] == label[i]:
+            if predict[i] == labels[i]:
                 right += 1
-            content += '{},{},{},{}\n' .format(idx[i][0], item, label[i], predict[i])
+            content += '{},{},{},{}\n' .format(idx[i][0], item, labels[i], predict[i])
 
-        res_data = {'idx': idx, 'result': result, 'label': label, 'predict': predict}
+        res_data = {'idx': idx, 'result': result, 'label': labels, 'predict': predict}
         logger.info("accuracy is {}".format(right/length))
         with open(args.pred_file_name, 'w', encoding='utf-8') as f:
             f.write(content)    
