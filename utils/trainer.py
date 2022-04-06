@@ -154,7 +154,7 @@ class Trainer(BaseTrainer):
     def deepspeed_init_inference(self, optimizer=None, scheduler=None):
         if self.deepspeed:
             self.deepspeed_wrap(optimizer, scheduler)
-            ds_path = os.path.join(self.config.bert_model_dir, 'deepspeed')
+            ds_path = os.path.join(self.config.output_model_dir, 'deepspeed')
             print('ds_path:', ds_path)
             load_path, _ = self.model.load_checkpoint(ds_path, 'None')
             assert load_path is not None            
