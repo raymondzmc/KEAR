@@ -209,16 +209,17 @@ class EmbeddingExplainerTorch(object):
         # Interactions for input indices specified by interaction_mask
         elif interaction_mask is not None:
             pdb.set_trace()
-                # batch_hessian = torch.zeros([batch_input.size(0), 
-                #                              int(interaction_mask.sum()),
-                #                              batch_input.size(1), 
-                #                              batch_input.size(2)]).to(batch_predictions.device)
-                # for feature in range(batch_input.size(1)):
-                #     batch_hessian[:,feature,:,:] = grad(
-                #         outputs=batch_gradients[:,feature],
-                #         inputs=batch_interpolated_beta,
-                #         grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
-                #         create_graph=True)[0].detach()
+            batch_hessian = torch.zeros([batch_input.size(0), 
+                                         int(interaction_mask.sum()),
+                                         batch_input.size(1), 
+                                         batch_input.size(2)]).to(batch_predictions.device)
+            for feature in range(batch_input.size(1)):
+                batch_hessian[:,feature,:,:] = grad(
+                    outputs=batch_gradients[:, feature],
+                    inputs=batch_interpolated_beta,
+                    grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
+                    create_graph=True)[0].detach()
+
         # Interactions for all input indices
         else:
             batch_hessian = torch.zeros([batch_input.size(0), 

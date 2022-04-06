@@ -204,7 +204,7 @@ class Model(PreTrainedModel):
                             batch_size=1,
                             num_samples=5,
                             use_expectation=False,
-                            interaction_mask=question_mask,
+                            interaction_mask=question_mask[:, [choice_idx]],
                         ).squeeze(0)[:input_len, :input_len].tolist()
                     )
                 else:
