@@ -133,11 +133,7 @@ class SelectReasonableText:
         tokens, attritions, probs = [], [], []
         looper = tqdm(dataloader, desc='Predict')
         
-        c = 0
         for batch in looper:
-            c+=1
-            if c > 3:
-                break
             # clip batch based on max length
             batch = clip_batch(batch)
             self.model.train()
@@ -516,7 +512,7 @@ if __name__ == '__main__':
                 'probs': probs,
                 'labels': labels,
             }
-            with open(os.path.join(args.predict_dir, 'interpretation_results.json'), 'w+') as f:
+            with open(os.path.join(args.predict_dir, f'{args.interpret_method}_results.json'), 'w+') as f:
                 json.dump(visualize_output, f, indent=4)
         else:
             idx, result, labels, predict = srt.trial(dataloader)
