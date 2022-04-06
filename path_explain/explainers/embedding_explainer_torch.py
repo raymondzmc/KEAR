@@ -30,6 +30,7 @@ class EmbeddingExplainerTorch(object):
                     inputs,
                     output_indices,
                     interaction_index=None,
+                    interaction_mask=None,
                     as_interactions=False):
         """
         Internal helper function to get an
@@ -43,8 +44,13 @@ class EmbeddingExplainerTorch(object):
         num_classes = test_output.shape[-1]
 
         if as_interactions and interaction_index is None:
-            shape_tuple = [inputs.shape[0], inputs.shape[1], inputs.shape[1]]
-            shape_tuple = tuple(shape_tuple)
+            if interaction_mask is None:
+                shape_tuple = [inputs.shape[0], inputs.shape[1], inputs.shape[1]]
+                shape_tuple = tuple(shape_tuple)
+            else:
+                # TODO: Need to fix for different size masks
+                shape_tuple = [inputs.shape[0], int(interaction_mask.sum()), inputs.shape[1]]
+                shape_tuple = tuple(shape_tuple)
 
         if is_multi_output and output_indices is None:
             num_classes = test_output.shape[-1]
