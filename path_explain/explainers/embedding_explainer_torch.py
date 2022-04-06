@@ -208,17 +208,17 @@ class EmbeddingExplainerTorch(object):
 
         # Interactions for input indices specified by interaction_mask
         elif interaction_mask is not None:
-            pdb.set_trace()
+            mask_len = interaction_mask.sum().item()
             batch_hessian = torch.zeros([batch_input.size(0), 
-                                         int(interaction_mask.sum()),
+                                         mask_len,
                                          batch_input.size(1), 
                                          batch_input.size(2)]).to(batch_predictions.device)
-            # for feature in range(batch_input[:, interaction_mask].size(1)):
-            #     batch_hessian[:,feature,:,:] = grad(
-            #         outputs=batch_gradients[:, feature],
-            #         inputs=batch_interpolated_beta,
-            #         grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
-            #         create_graph=True)[0].detach()
+            for feature in range(batch_input[:, interaction_mask].size(1)):
+                batch_hessian[:,feature,:,:] = grad(
+                    outputs=batch_gradients[:, feature],
+                    inputs=batch_interpolated_beta,
+                    grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
+                    create_graph=True)[0].detach()
 
         # Interactions for all input indices
         else:
@@ -231,8 +231,9 @@ class EmbeddingExplainerTorch(object):
                     outputs=batch_gradients[:,feature],
                     inputs=batch_interpolated_beta,
                     grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
-                        create_graph=True)[0].detach()
+                    create_graph=True)[0].detach()
 
+        pdb.set_trace()
         if interaction_index is not None:
             batch_difference = batch_difference[tuple([slice(None)] + \
                                                                  interaction_index)]
