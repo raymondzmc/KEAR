@@ -268,7 +268,7 @@ class Trainer(BaseTrainer):
         label_to_use = labels
         clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
 
-        loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
+        loss = torch.nn.functional.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
 
         # Not used for interpretation
         adv_loss = torch.zeros_like(loss)
