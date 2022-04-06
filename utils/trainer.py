@@ -160,6 +160,8 @@ class Trainer(BaseTrainer):
             assert load_path is not None            
         
     def set_optimizer(self, optimizer, scheduler=None):
+
+        
         self.optimizer = optimizer
         self.scheduler = scheduler
 

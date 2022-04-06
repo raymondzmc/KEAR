@@ -82,7 +82,9 @@ class Model(PreTrainedModel):
         self.init_weights()
         self.requires_grad = {}
 
+        # Our defined settings
         self.interpret = opt['interpret_method'] != None
+        self.save_hidden_states = opt['save_hidden_states']
 
         print('init model finished.')
 
@@ -259,6 +261,7 @@ class Model(PreTrainedModel):
             choice_mask, labels, dataset_name, mode = batch[-4:]
             idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
 
+            # Perform a separate inference for each answer choice
             if self.my_config['break_input']:
                 gc.collect()
                 torch.cuda.empty_cache()
@@ -274,7 +277,11 @@ class Model(PreTrainedModel):
                     for i in range(self.num_choices)
                 ], dim=-1)
             else:
-                logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+
+                if self.save_hidden_states:
+                    logits, hidden_states = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+                else:
+                    logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
             
             label_to_use = labels
             clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
@@ -349,7 +356,11 @@ class Model(PreTrainedModel):
             inputs_embeds=inputs_embeds,
         )
 
-        return self.scorer[dataset_name](outputs, attention_mask)
+        if self.save_hidden_states:
+            pdb.set_trace()
+            return self.scorer[dataset_name](outputs, attention_mask)
+        else:
+            return self.scorer[dataset_name](outputs, attention_mask)
 
 
     def predict(self, idx, input_ids, attention_mask, token_type_ids):

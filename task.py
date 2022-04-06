@@ -246,6 +246,7 @@ def get_args():
     parser.add_argument('--partition', type=int, default=None, help='Partition of the dataloader to evaluate (interpretation).')
     parser.add_argument('--num_partitions', type=int, default=10,  help='Number of dataloader partition.')
     parser.add_argument('--break_input', action='store_true', help='Break the input and performance inference with each choice separately.')
+    parser.add_argument('--save_hidden_states', type=bool, action='store_true', help='Save the hidden states of the model during inference.')
 
     parser = deepspeed.add_config_arguments(parser)
 
