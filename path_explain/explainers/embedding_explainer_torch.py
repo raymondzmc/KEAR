@@ -481,9 +481,9 @@ class EmbeddingExplainerTorch(object):
         """
         interactions, is_multi_output, num_classes = self._init_array(inputs,
                                                                       output_indices,
-                                                                      interaction_index,
+                                                                      interaction_index=interaction_index,
                                                                       interaction_mask=interaction_mask,
-                                                                      True)
+                                                                      as_interactions=True)
 
         interaction_index = self._clean_index(interaction_index)
         interaction_mask = interaction_mask.bool()
