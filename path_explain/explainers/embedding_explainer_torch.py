@@ -213,12 +213,12 @@ class EmbeddingExplainerTorch(object):
                                          int(interaction_mask.sum()),
                                          batch_input.size(1), 
                                          batch_input.size(2)]).to(batch_predictions.device)
-            for feature in range(batch_input.size(1)):
-                batch_hessian[:,feature,:,:] = grad(
-                    outputs=batch_gradients[:, feature],
-                    inputs=batch_interpolated_beta,
-                    grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
-                    create_graph=True)[0].detach()
+            # for feature in range(batch_input[:, interaction_mask].size(1)):
+            #     batch_hessian[:,feature,:,:] = grad(
+            #         outputs=batch_gradients[:, feature],
+            #         inputs=batch_interpolated_beta,
+            #         grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
+            #         create_graph=True)[0].detach()
 
         # Interactions for all input indices
         else:
@@ -530,6 +530,6 @@ class EmbeddingExplainerTorch(object):
                                                                 use_expectation,
                                                                 None,
                                                                 interaction_index,
-                                                                interaction_mask)
+                                                                interaction_mask[i])
                 interactions[i] = current_interactions
         return interactions
