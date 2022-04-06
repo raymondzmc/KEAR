@@ -304,7 +304,12 @@ class Model(PreTrainedModel):
             with torch.no_grad():
                 predicts = torch.argmax(clf_logits, dim=1)
                 right_num = (predicts == labels)
-            return loss, right_num, input_size, clf_logits, adv_norm
+
+            if self.save_hidden_states:
+                hidden_states = hidden_states.unsqueeze(0).reshape(-1, self.num_choices, hidden_states.shape[-1])
+                return loss, right_num, input_size, clf_logits, adv_norm, hidden_states
+            else:
+                return loss, right_num, input_size, clf_logits, adv_norm
 
     def _forward(self, idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name='csqa', inputs_embeds=None, return_raw=False):
         if inputs_embeds is None:
@@ -357,8 +362,8 @@ class Model(PreTrainedModel):
         )
 
         if self.save_hidden_states:
-            pdb.set_trace()
-            return self.scorer[dataset_name](outputs, attention_mask)
+            cls_hidden_states = outputs[0][:, 0, :].detach().cpu()
+            return self.scorer[dataset_name](outputs, attention_mask), cls_hidden_states
         else:
             return self.scorer[dataset_name](outputs, attention_mask)
 

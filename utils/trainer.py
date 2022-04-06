@@ -161,7 +161,7 @@ class Trainer(BaseTrainer):
         
     def set_optimizer(self, optimizer, scheduler=None):
 
-        
+
         self.optimizer = optimizer
         self.scheduler = scheduler
 
@@ -184,8 +184,12 @@ class Trainer(BaseTrainer):
                 all_result = self.model(*batch, mode)
         else:
             all_result = self.model(*batch, mode)
+
+        # For inference
         if return_all:
             return all_result
+
+        # For training only:
         loss, right_num, input_size, logits, adv_norm = all_result 
         if self.multi_gpu:
             valids_all = self.gatherer.gather_all(valids)
