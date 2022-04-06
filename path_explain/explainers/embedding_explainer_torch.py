@@ -199,12 +199,28 @@ class EmbeddingExplainerTorch(object):
             batch_gradients = batch_gradients.sum(self.embedding_axis)
             ################################
 
+        # Interactions for a single input index specified by interaction_index
         if interaction_index is not None:
             batch_hessian = grad(
                     outputs=batch_gradients,
                     inputs=batch_interpolated_beta,
                     grad_outputs=torch.ones_like(batch_gradients).to(batch_predictions.device),
                     create_graph=True)[0].detach()
+
+        # Interactions for input indices specified by interaction_mask
+        elif interaction_mask is not None:
+                pdb.set_trace()
+                # batch_hessian = torch.zeros([batch_input.size(0), 
+                #                              batch_input.size(1), 
+                #                              batch_input.size(1), 
+                #                              batch_input.size(2)]).to(batch_predictions.device)
+                # for feature in range(batch_input.size(1)):
+                #     batch_hessian[:,feature,:,:] = grad(
+                #         outputs=batch_gradients[:,feature],
+                #         inputs=batch_interpolated_beta,
+                #         grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
+                #         create_graph=True)[0].detach()
+        # Interactions for all input indices
         else:
             batch_hessian = torch.zeros([batch_input.size(0), 
                                          batch_input.size(1), 
@@ -215,7 +231,7 @@ class EmbeddingExplainerTorch(object):
                     outputs=batch_gradients[:,feature],
                     inputs=batch_interpolated_beta,
                     grad_outputs=torch.ones_like(batch_gradients[:,feature]).to(batch_predictions.device),
-                    create_graph=True)[0].detach()
+                        create_graph=True)[0].detach()
 
         if interaction_index is not None:
             batch_difference = batch_difference[tuple([slice(None)] + \
@@ -413,7 +429,8 @@ class EmbeddingExplainerTorch(object):
                                                             batch_alphas=(batch_alpha, batch_beta),
                                                             output_index=output_index,
                                                             second_order=True,
-                                                            interaction_index=interaction_index)
+                                                            interaction_index=interaction_index,
+                                                            interaction_mask=interaction_mask,)
             attribution_array.append(batch_attributions.detach().cpu())
         attribution_array = np.concatenate(attribution_array, axis=0)
         attributions = np.mean(attribution_array, axis=0)
