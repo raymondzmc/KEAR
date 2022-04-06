@@ -190,7 +190,6 @@ class EmbeddingExplainerTorch(object):
                     create_graph=True)[0]
         
         batch_gradients = batch_gradients * batch_difference_beta
-        pdb.set_trace()
         if interaction_index is not None:
             batch_gradients = batch_gradients[tuple([slice(None)] + interaction_index)]
         else:
@@ -210,10 +209,10 @@ class EmbeddingExplainerTorch(object):
         # Interactions for input indices specified by interaction_mask
         elif interaction_mask is not None:
             pdb.set_trace()
-                # batch_hessian = torch.zeros([batch_input.size(0), 
-                #                              batch_input.size(1), 
-                #                              batch_input.size(1), 
-                #                              batch_input.size(2)]).to(batch_predictions.device)
+                batch_hessian = torch.zeros([batch_input.size(0), 
+                                             batch_input.size(1), 
+                                             batch_input.size(1), 
+                                             batch_input.size(2)]).to(batch_predictions.device)
                 # for feature in range(batch_input.size(1)):
                 #     batch_hessian[:,feature,:,:] = grad(
                 #         outputs=batch_gradients[:,feature],
