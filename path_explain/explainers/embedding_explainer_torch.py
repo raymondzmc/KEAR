@@ -429,7 +429,7 @@ class EmbeddingExplainerTorch(object):
                                                             output_index=output_index,
                                                             second_order=True,
                                                             interaction_index=interaction_index,
-                                                            interaction_mask=interaction_mask,)
+                                                            interaction_mask=interaction_mask)
             attribution_array.append(batch_attributions.detach().cpu())
         attribution_array = np.concatenate(attribution_array, axis=0)
         attributions = np.mean(attribution_array, axis=0)
