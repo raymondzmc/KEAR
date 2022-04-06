@@ -209,7 +209,7 @@ class EmbeddingExplainerTorch(object):
 
         # Interactions for input indices specified by interaction_mask
         elif interaction_mask is not None:
-                pdb.set_trace()
+            pdb.set_trace()
                 # batch_hessian = torch.zeros([batch_input.size(0), 
                 #                              batch_input.size(1), 
                 #                              batch_input.size(1), 
