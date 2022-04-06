@@ -480,6 +480,8 @@ class EmbeddingExplainerTorch(object):
                                                                       True)
 
         interaction_index = self._clean_index(interaction_index)
+        interaction_mask = interaction_mask.bool()
+
 
         input_iterable = enumerate(inputs)
         if verbose:
