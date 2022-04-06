@@ -104,6 +104,7 @@ class SelectReasonableText:
         idx = []
         labels = []
         predicts = []
+        # hidden_states = torch.Tensor()
         looper = tqdm(dataloader, desc='Predict') if self.config.local_rank == 0 else dataloader
         for batch in looper:
             batch = clip_batch(batch)
@@ -113,11 +114,16 @@ class SelectReasonableText:
                 batch = list(batch[:-2]) + [torch.zeros_like(batch[-2]), batch[-1]]
                 batch = tuple(batch)
             with torch.no_grad():
-                loss, right_num, input_size, logits, adv_loss = self.trainer._forward(batch, None, mode='dev', dataset_name=using_dataset_name, return_all=True)
+                if self.config.save_hidden_states:
+                    loss, right_num, input_size, logits, adv_loss, hidden_states = self.trainer._forward(batch, None, mode='dev', dataset_name=using_dataset_name, return_all=True)
+                else:
+                    loss, right_num, input_size, logits, adv_loss = self.trainer._forward(batch, None, mode='dev', dataset_name=using_dataset_name, return_all=True)
                 idx.extend(batch[0].cpu().numpy().tolist())
                 result.extend(logits.cpu().numpy().tolist())
                 labels.extend(this_label.numpy().tolist())
                 predicts.extend(torch.argmax(logits, dim=1).cpu().numpy().tolist())
+                pdb.set_trace()
+                # hidden_states.append()
         return idx, result, labels, predicts
 
     def interpret(self, dataloader, tokenizer):
