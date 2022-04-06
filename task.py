@@ -246,6 +246,8 @@ def get_args():
 
     # Our defined parameters
     parser.add_argument('--interpret_method', default=None, help='Method for model interpretation.')
+    parser.add_argument('--partition', type=int, default=None, help='Partition of the dataloader to evaluate (interpretation).')
+    parser.add_argument('--partition_size', type=int, default=100,  help='Maximum size of each dataloader partition.')
     parser.add_argument('--break_input', action='store_true', help='Break the input and performance inference with each choice separately.')
 
     parser = deepspeed.add_config_arguments(parser)
@@ -463,6 +465,9 @@ if __name__ == '__main__':
 
         print('train_data %d ' % len(train_data))
         train_dataloader = DataLoaderSampler(train_dataloader, args.data_version)
+
+    if args.mission == 'output' and args.interpret_method != 'None':
+        pdb.set_trace()
 
     devlp_dataloader = make_dataloader(
             experiment, devlp_data, tokenizer, total_batch_size=args.total_batch_size,
