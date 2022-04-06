@@ -201,7 +201,7 @@ class Model(PreTrainedModel):
                         explainer.interactions(
                             embedding_output[[choice_idx]],
                             baseline,
-                            batch_size=2,
+                            batch_size=1,
                             num_samples=10,
                             use_expectation=False,
                             interaction_mask=question_mask[:, choice_idx],
