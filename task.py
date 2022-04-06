@@ -513,10 +513,10 @@ if __name__ == '__main__':
         with open(args.pred_file_name, 'w', encoding='utf-8') as f:
             f.write(content)    
         with open(args.pred_file_name.replace('.csv', '.json'), 'w', encoding='utf-8') as f:
-            json.dump(res_data, f)
+            json.dump(res_data, f, indent=4)
         with open(args.pred_file_name.replace('.csv', '_summary.json'), 'w', encoding='utf-8') as f:
             summary_data = {'correct': right, 'total': length, 'config': vars(args)}
-            json.dump(summary_data, f)
+            json.dump(summary_data, f, indent=4)
   
     end = time.time()
     logger.info("start is {}, end is {}".format(start, end))

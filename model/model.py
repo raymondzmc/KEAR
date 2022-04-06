@@ -81,6 +81,9 @@ class Model(PreTrainedModel):
 
         self.init_weights()
         self.requires_grad = {}
+
+        self.interpret = opt['interpretation_method'] != None
+
         print('init model finished.')
 
     def normalize_name(self, name):
@@ -167,135 +170,134 @@ class Model(PreTrainedModel):
         """
         batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
         """
-        choice_mask, labels, dataset_name, method = batch[-4:]
-        idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
-        input_size = self._to_tensor(idx.size(0), idx.device)
+        if self.interpret:
+            choice_mask, labels, dataset_name, method = batch[-4:]
+            idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
+            input_size = self._to_tensor(idx.size(0), idx.device)
 
-        embedding_output = self.embed_encode(input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
+            embedding_output = self.embed_encode(input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
 
-        saliency_map = []
-        for choice_idx in range(choice_mask.shape[-1]):
-            input_len = int(attention_mask[:, [choice_idx]].sum().item())
-            explainer = EmbeddingExplainerTorch(
-                model=lambda x: self._interpret_forward(x, attention_mask[:, [choice_idx]], dataset_name=dataset_name),
-                embedding_axis=-1,
-            )
-
-            baseline = torch.zeros((1,) + embedding_output[[choice_idx]].shape[1:], device=embedding_output.device)
-
-            if method == 'attribution':
-                saliency_map.append(
-                    explainer.attributions(
-                        embedding_output[[choice_idx]],
-                        baseline,
-                        batch_size=1,
-                        num_samples=5,
-                        use_expectation=False,
-                    ).squeeze(0)[:input_len].tolist()
+            saliency_map = []
+            for choice_idx in range(choice_mask.shape[-1]):
+                input_len = int(attention_mask[:, [choice_idx]].sum().item())
+                explainer = EmbeddingExplainerTorch(
+                    model=lambda x: self._interpret_forward(x, attention_mask[:, [choice_idx]], dataset_name=dataset_name),
+                    embedding_axis=-1,
                 )
-            elif method == 'interaction':
-                saliency_map.append(
-                    explainer.interactions(
-                        embedding_output[[choice_idx]],
-                        baseline,
-                        batch_size=1,
-                        num_samples=5,
-                        use_expectation=False,
-                    ).squeeze(0)[:input_len, :input_len].tolist()
-                )
+
+                baseline = torch.zeros((1,) + embedding_output[[choice_idx]].shape[1:], device=embedding_output.device)
+
+                if method == 'attribution':
+                    saliency_map.append(
+                        explainer.attributions(
+                            embedding_output[[choice_idx]],
+                            baseline,
+                            batch_size=1,
+                            num_samples=5,
+                            use_expectation=False,
+                        ).squeeze(0)[:input_len].tolist()
+                    )
+                elif method == 'interaction':
+                    saliency_map.append(
+                        explainer.interactions(
+                            embedding_output[[choice_idx]],
+                            baseline,
+                            batch_size=1,
+                            num_samples=5,
+                            use_expectation=False,
+                        ).squeeze(0)[:input_len, :input_len].tolist()
+                    )
+                else:
+                    raise NotImplementedError("\"interpretation_method\" not supported!")
+
+
+            # scores = self._interpret_forward(lm_embeddings, attention_mask)
+            # def forward_func(input_ids, index=0):
+            #     pred = self._forward(idx,
+            #                          input_ids[:, [index]],
+            #                          attention_mask[:, [index]],
+            #                          token_type_ids[:, [index]],
+            #                          question_mask,
+            #                          dataset_name)
+            #     return pred[0]
+
+
+            # attritions = []
+            # lig = LayerIntegratedGradients(forward_func, self.deberta.embeddings.word_embeddings)
+            # lm_embeddings.requires_grad_()
+            # for index in range(choice_mask.size(1)):
+            #     torch.cuda.empty_cache()
+            #     attr = lig.attribute(inputs=(input_ids),
+            #                          additional_forward_args=(0),
+            #                          n_steps=50,
+            #                          internal_batch_size=1)
+            #     attr = attr.sum(dim=-1).squeeze(0)
+            #     attr = attr / torch.norm(attr)
+            #     attritions.append(attr.tolist())
+
+
+            with torch.no_grad():
+                logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+
+            label_to_use = labels
+            clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
+
+            loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
+
+            # Not used for interpretation
+            adv_loss = torch.zeros_like(loss)
+            adv_norm = torch.zeros_like(loss)
+
+            with torch.no_grad():
+                predicts = torch.argmax(clf_logits, dim=1)
+                right_num = (predicts == labels)
+            return loss, right_num, input_size, clf_logits, adv_norm, saliency_map
+        else:
+            """
+            batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
+            """
+            choice_mask, labels, dataset_name, mode = batch[-4:]
+            idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
+
+            if self.my_config['break_input']:
+                gc.collect()
+                torch.cuda.empty_cache()
+                logits = torch.cat([
+                    self._forward(
+                        idx,
+                        input_ids[:, [i]],
+                        attention_mask[:, [i]],
+                        token_type_ids[:, [i]],
+                        question_mask[:, [i]],
+                        dataset_name
+                    )
+                    for i in range(self.num_choices)
+                ], dim=-1)
             else:
-                raise NotImplementedError("\"interpretation_method\" not supported!")
+                logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+            
+            label_to_use = labels
+            clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
 
-
-        # scores = self._interpret_forward(lm_embeddings, attention_mask)
-        # def forward_func(input_ids, index=0):
-        #     pred = self._forward(idx,
-        #                          input_ids[:, [index]],
-        #                          attention_mask[:, [index]],
-        #                          token_type_ids[:, [index]],
-        #                          question_mask,
-        #                          dataset_name)
-        #     return pred[0]
-
-
-        # attritions = []
-        # lig = LayerIntegratedGradients(forward_func, self.deberta.embeddings.word_embeddings)
-        # lm_embeddings.requires_grad_()
-        # for index in range(choice_mask.size(1)):
-        #     torch.cuda.empty_cache()
-        #     attr = lig.attribute(inputs=(input_ids),
-        #                          additional_forward_args=(0),
-        #                          n_steps=50,
-        #                          internal_batch_size=1)
-        #     attr = attr.sum(dim=-1).squeeze(0)
-        #     attr = attr / torch.norm(attr)
-        #     attritions.append(attr.tolist())
-
-
-        with torch.no_grad():
-            logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
-
-        label_to_use = labels
-        clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
-
-        loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
-
-        # Not used for interpretation
-        adv_loss = torch.zeros_like(loss)
-        adv_norm = torch.zeros_like(loss)
-
-        with torch.no_grad():
-            predicts = torch.argmax(clf_logits, dim=1)
-            right_num = (predicts == labels)
-        return loss, right_num, input_size, clf_logits, adv_norm, saliency_map
-
-
-    # def forward(self, *batch):
-    #     """
-    #     batch: (0:idx, 1:input_ids, 2:attention_mask, 3:token_type_ids, 4:question_mask, 5:choice_mask, 6:choice labels, 7:dataset_name, 8:mode)
-    #     """
-    #     choice_mask, labels, dataset_name, mode = batch[-4:]
-    #     idx, input_ids, attention_mask, token_type_ids, question_mask = batch[:-4]
-
-    #     if self.my_config['break_input']:
-    #         gc.collect()
-    #         torch.cuda.empty_cache()
-    #         logits = torch.cat([
-    #             self._forward(
-    #                 idx,
-    #                 input_ids[:, [i]],
-    #                 attention_mask[:, [i]],
-    #                 token_type_ids[:, [i]],
-    #                 question_mask[:, [i]],
-    #                 dataset_name
-    #             )
-    #             for i in range(self.num_choices)
-    #         ], dim=-1)
-    #     else:
-    #         logits = self._forward(idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
-        
-    #     label_to_use = labels
-    #     clf_logits = choice_mask * VERY_NEGATIVE_NUMBER + logits
-
-    #     loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
-    #     adv_loss = torch.zeros_like(loss)
-    #     adv_norm = torch.zeros_like(loss)
-    #     if self.my_config.get('adv_train', False) and mode == 'train':
-    #         if self.my_config.get('adv_sift', False):
-    #             adv_loss, adv_norm = self.adv_teacher.loss(logits, self._forward, self.my_config['grad_adv_loss'], 
-    #                 self.my_config['adv_loss'], idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
-    #             loss = loss + self.my_config['adv_alpha'] * adv_loss
-    #         else:
-    #             adv_loss, adv_norm, adv_logits = self.adv_teacher.forward(self, logits, idx, input_ids, token_type_ids, attention_mask, question_mask, dataset_name)
-    #             if adv_loss is None:
-    #                 adv_loss = torch.zeros_like(loss)
-    #                 adv_norm = adv_loss
-    #             loss = loss + self.my_config['adv_alpha'] * adv_loss
-    #     input_size = self._to_tensor(idx.size(0), idx.device)
-    #     with torch.no_grad():
-    #         predicts = torch.argmax(clf_logits, dim=1)
-    #         right_num = (predicts == labels)
-    #     return loss, right_num, input_size, clf_logits, adv_norm
+            loss = F.cross_entropy(clf_logits, label_to_use.view(-1), reduction='none')
+            adv_loss = torch.zeros_like(loss)
+            adv_norm = torch.zeros_like(loss)
+            if self.my_config.get('adv_train', False) and mode == 'train':
+                if self.my_config.get('adv_sift', False):
+                    adv_loss, adv_norm = self.adv_teacher.loss(logits, self._forward, self.my_config['grad_adv_loss'], 
+                        self.my_config['adv_loss'], idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name)
+                    loss = loss + self.my_config['adv_alpha'] * adv_loss
+                else:
+                    adv_loss, adv_norm, adv_logits = self.adv_teacher.forward(self, logits, idx, input_ids, token_type_ids, attention_mask, question_mask, dataset_name)
+                    if adv_loss is None:
+                        adv_loss = torch.zeros_like(loss)
+                        adv_norm = adv_loss
+                    loss = loss + self.my_config['adv_alpha'] * adv_loss
+            input_size = self._to_tensor(idx.size(0), idx.device)
+            with torch.no_grad():
+                predicts = torch.argmax(clf_logits, dim=1)
+                right_num = (predicts == labels)
+            return loss, right_num, input_size, clf_logits, adv_norm
 
     def _forward(self, idx, input_ids, attention_mask, token_type_ids, question_mask, dataset_name='csqa', inputs_embeds=None, return_raw=False):
         if inputs_embeds is None:
