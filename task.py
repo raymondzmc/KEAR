@@ -167,12 +167,13 @@ class SelectReasonableText:
             input_ids = batch[1][0]
             tokens.append([tokenizer.convert_ids_to_tokens(ids)[:int(attention_mask[choice_idx].sum())] for choice_idx, ids in enumerate(input_ids)])
             # attritions.append([values[:int(attention_mask[choice_idx].sum())] for choice_idx, values in enumerate(attr)])
+            attritions.append(saliency_map)
             probs.append(torch.softmax(logits, dim=-1).squeeze(0).tolist())
 
         if self.config.ddp:
             dist.barrier()
 
-        return idx, result, labels, predicts, tokens, saliency_map, probs
+        return idx, result, labels, predicts, tokens, attritions, probs
 
 
 
