@@ -194,7 +194,7 @@ class Model(PreTrainedModel):
                             embedding_output[[choice_idx]],
                             baseline,
                             batch_size=1,
-                            num_samples=5,
+                            num_samples=50,
                             use_expectation=False,
                         ).squeeze(0)[:input_len].tolist()
                     )
